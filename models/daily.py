@@ -22,4 +22,4 @@ class DailyLine(models.Model):
         ordering = ["-trade_date"]
 
     def __str__(self):
-        return f"{self.stock_code} on {self.trade_date}: O={self.open} H={self.high} L={self.low} C={self.close}"
+        return f"股票={self.stock_code}, 日期={self.trade_date}, 开盘价={self.open}, 最高价={self.high}, 最低价={self.low}, 收盘价={self.close}"

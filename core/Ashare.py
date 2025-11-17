@@ -25,8 +25,18 @@ def get_price_day_tx(code, end_date="", count=10, frequency="1d"):  # 日线获�
     ms = "qfq" + unit
     stk = st["data"][code]
     buf = stk[ms] if ms in stk else stk[unit]  # 指数返回不是qfqday,是day
+    dtype_mapping = {
+        "time": object,
+        "open": float,
+        "close": float,
+        "high": float,
+        "low": float,
+        "volume": float,
+    }
     df = pd.DataFrame(
-        buf, columns=["time", "open", "close", "high", "low", "volume"], dtype="float"
+        buf,
+        columns=["time", "open", "close", "high", "low", "volume"],
+        dtype=dtype_mapping,
     )
     df.time = pd.to_datetime(df.time)
     df.set_index(["time"], inplace=True)

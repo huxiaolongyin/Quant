@@ -11,6 +11,10 @@ POSTGRESQL_HOST = os.environ.get("POSTGRESQL_HOST")
 POSTGRESQL_PORT = os.environ.get("POSTGRESQL_PORT")
 POSTGRESQL_PASSWORD = os.environ.get("POSTGRESQL_PASSWORD")
 
+# SMTP邮箱
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PWD = os.environ.get("SMTP_PWD")
+
 # TORTOISE 配置
 TORTOISE_ORM = {
     "connections": {

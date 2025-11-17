@@ -4,7 +4,11 @@ from tortoise import connections
 from tortoise.expressions import Q
 
 from core.init_app import with_db
+from logger import get_logger
 from models import DailyLine, Stock
+from utils import get_previous_workday
+
+logger = get_logger(__name__)
 
 
 @with_db
@@ -17,7 +21,7 @@ async def stock_select():
     - 最近 15 天内，有涨停或跌停的情况----水深，把握不住
     """
 
-    yesterday_str = (datetime.today() - timedelta(days=2)).strftime("%Y-%m-%d")
+    yesterday_str = get_previous_workday()
     start_date_str = (datetime.today() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     # 找出最近15天的涨停股
@@ -71,7 +75,7 @@ async def stock_select():
         & ~Q(industry__in=["K 房地产", "E 建筑业"])
     )
     stocks = await Stock.filter(q).all()
-
+    logger.info(f"股票池: {len(stocks)}")
     return [stock.full_stock_code for stock in stocks]
 
 

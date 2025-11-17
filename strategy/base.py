@@ -1,11 +1,16 @@
+from datetime import datetime
+from queue import Queue
+
 import backtrader as bt
 
 from logger import get_logger
+from utils import send_email
 
 logger = get_logger(__name__)
 
 
 class BaseStrategy(bt.Strategy):
+
     def log(self, txt, dt=None):
         """日志记录函数"""
         dt = dt or self.datas[0].datetime.date(0)

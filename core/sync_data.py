@@ -7,18 +7,9 @@ from core.Ashare import get_price
 from core.init_app import with_db
 from logger import get_logger
 from models import DailyLine, Stock
+from utils import code_transform
 
 logger = get_logger(__name__)
-
-
-def __parse_code(code: str):
-    if code.endswith(".SZ"):
-        code = "sz" + code[:-3]
-    elif code.endswith(".SH"):
-        code = "sh" + code[:-3]
-    else:
-        code = code.lower()
-    return code
 
 
 async def sync_stock(csv_path: str):
@@ -105,7 +96,7 @@ async def sync_stock(csv_path: str):
 async def sync_stock_daily_line(code: str, count: int = 1):
     "同步日线 （事务 + 批量插入 + 更新）"
 
-    code = __parse_code(code)
+    code = code_transform(code)
 
     stock_df = get_price(code, count=count)
 
@@ -138,6 +129,7 @@ async def sync_stock_daily_line(code: str, count: int = 1):
             )
 
             if date_obj not in existing_dates:
+
                 # 新记录放入批量插入队列
                 new_records.append(
                     DailyLine(
@@ -163,8 +155,8 @@ async def main():
     # await sync_stock("data/stocks.csv")
     stock_objs = await Stock.all()
     for stock in stock_objs:
-        await sync_stock_daily_line(stock.full_stock_code, count=1)
-        await asyncio.sleep(0.05)
+        await sync_stock_daily_line(stock.full_stock_code, count=2)
+        await asyncio.sleep(0.02)
 
 
 if __name__ == "__main__":
