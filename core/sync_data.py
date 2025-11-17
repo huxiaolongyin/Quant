@@ -1,9 +1,9 @@
 from datetime import datetime
 
 import pandas as pd
-from Ashare import get_price
 from tortoise.transactions import in_transaction
 
+from core.Ashare import get_price
 from core.init_app import with_db
 from logger import get_logger
 from models import DailyLine, Stock
