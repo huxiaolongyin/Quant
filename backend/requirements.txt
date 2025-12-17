@@ -1,0 +1,16 @@
+ipykernel
+backtrader[plotting]
+numpy
+pandas
+scipy
+seaborn
+openpyxl
+xlrd
+tortoise-orm[asyncpg]==0.25.1
+python-dotenv>=1.0.0
+aerich==0.9.2
+requests
+optuna
+fastapi
+loguru
+uvicorn

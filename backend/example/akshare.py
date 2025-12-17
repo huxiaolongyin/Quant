@@ -1,0 +1,185 @@
+import datetime
+
+import pandas as pd
+import requests
+
+from backend.core.logger import logger
+from backend.utils import format_code
+
+# 全局 Session，复用 TCP 连接，统一 Header
+SESSION = requests.Session()
+SESSION.headers.update(
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+)
+
+
+def _process_dataframe(data, columns):
+    """统一处理 DataFrame 格式：类型转换、索引设置"""
+    df = pd.DataFrame(data, columns=columns)
+
+    # 自动转换数值类型
+    cols_to_float = ["open", "close", "high", "low", "volume"]
+    df[cols_to_float] = df[cols_to_float].astype(float)
+
+    # 处理时间索引
+    time_col = columns[0]  # 通常是 'day' 或 'time'
+    df[time_col] = pd.to_datetime(df[time_col])
+    df.set_index(time_col, inplace=True)
+    df.index.name = ""
+    return df
+
+
+def get_price_tx(code: str, end_date: str = "", count: int = 10, frequency: str = "1d"):
+    """腾讯数据源：支持日线及分钟线"""
+    unit_map = {"1d": "day", "1w": "week", "1M": "month"}
+
+    # 处理日期
+    if not end_date or end_date == datetime.datetime.now().strftime("%Y-%m-%d"):
+        end_date = ""
+
+    else:
+        end_date = (
+            end_date.strftime("%Y-%m-%d")
+            if isinstance(end_date, datetime.date)
+            else end_date.split(" ")[0]
+        )
+
+    # 分支：日线/周线/月线
+    if frequency in unit_map:
+        unit = unit_map[frequency]
+        url = f"http://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={code},{unit},,{end_date},{count},qfq"
+        resp = SESSION.get(url, timeout=10)
+        resp.raise_for_status()
+
+        data_json = resp.json()
+        ms = "qfq" + unit
+        stk_data = data_json["data"].get(code)
+        # 优先取前复权数据，没有则取不复权
+        buf = stk_data.get(ms, stk_data.get(unit, []))
+
+        # 前复权可能有7个数据，只取前6个
+        buf = [b[:6] for b in buf]
+        return _process_dataframe(
+            buf, columns=["time", "open", "close", "high", "low", "volume"]
+        )
+
+    # 分支：分钟线
+    else:
+        ts = int(frequency[:-1])  # 解析 1m, 5m, 15m...
+        url = f"http://ifzq.gtimg.cn/appstock/app/kline/mkline?param={code},m{ts},,{count}"
+        resp = SESSION.get(url, timeout=10)
+        resp.raise_for_status()
+
+        data_json = resp.json()
+        buf = data_json["data"][code]["m" + str(ts)]
+
+        # 腾讯分钟线返回的数据列较多，只要前6列
+        df = _process_dataframe(
+            buf, columns=["time", "open", "close", "high", "low", "volume", "n1", "n2"]
+        )
+        df = df.iloc[:, :5]  # 只要 OHLCV
+
+        # 修正最新即时价格 (qt 数据)
+        latest_price = float(data_json["data"][code]["qt"][code][3])
+        df.iloc[-1, df.columns.get_loc("close")] = latest_price
+        return df
+
+
+# 新浪接口
+def get_price_sina(code, end_date="", count=10, frequency="60m"):
+    """新浪数据源：支持全周期"""
+    # 频率映射
+    freq_map = {"1d": "240m", "1w": "1200m", "1M": "7200m"}
+    sina_freq = freq_map.get(frequency, frequency)
+
+    # 计算 scale (分钟数)
+    scale = int(sina_freq[:-1])
+
+    # 处理带结束日期的 count 补偿逻辑
+    original_count = count
+    if end_date and frequency in ["1d", "1w", "1M", "240m", "1200m", "7200m"]:
+        dt_end = (
+            pd.to_datetime(end_date)
+            if not isinstance(end_date, datetime.date)
+            else pd.to_datetime(end_date)
+        )
+        # 估算需要多请求多少条数据才能覆盖到 end_date
+        diff_days = (datetime.datetime.now() - dt_end).days
+        # 粗略估算：周线除以4，月线除以29，其他按日
+        factor = 4 if "w" in frequency else (29 if "M" in frequency else 1)
+        count += (diff_days // factor) + 5  # +5 buffer
+
+    url = f"http://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={code}&scale={scale}&ma=5&datalen={count}"
+
+    resp = SESSION.get(url, timeout=10)
+    resp.raise_for_status()
+
+    data_json = resp.json()
+    if not data_json:
+        raise ValueError(f"Sina API returned empty data for {code}")
+
+    df = _process_dataframe(
+        data_json, columns=["day", "open", "high", "low", "close", "volume"]
+    )
+
+    # 如果指定了 end_date，进行切片
+    if end_date:
+        df = df[df.index <= end_date]
+        return df.iloc[-original_count:]
+
+    return df
+
+
+def get_price(code, end_date="", count=10, frequency="1d", fields=[]):
+    """
+    对外统一接口
+    Args:
+        code: 证券代码 (e.g. 'sh000001', '600519.XSHG')
+        end_date: 结束日期
+        count: 数据长度
+        frequency: 周期 ('1m', '5m', '15m', '30m', '60m', '1d', '1w', '1M')
+    """
+    xcode = format_code(code)
+
+    # 策略配置：定义不同周期的首选和备选源
+    # 1m 只有腾讯有
+    if frequency == "1m":
+        return get_price_tx(xcode, end_date, count, frequency)
+
+    # 其他周期：默认首选新浪，备选腾讯
+    primary = get_price_sina
+    backup = get_price_tx
+
+    # 如果是腾讯更擅长的日/周/月，也可以配置为腾讯优先，但保持原逻辑新浪优先
+    try:
+        return primary(xcode, end_date=end_date, count=count, frequency=frequency)
+    except (requests.RequestException, ValueError, KeyError) as e:
+        # 调试时可开启
+        # logger.debug(f"Primary source failed: {e}, switching to backup...")
+        try:
+            return backup(xcode, end_date=end_date, count=count, frequency=frequency)
+        except Exception as e_backup:
+            logger.error(f"All sources failed for code: {code}. Error: {e_backup}")
+            return pd.DataFrame()  # 返回空DF避免程序Crash
+
+
+if __name__ == "__main__":
+    # 测试代码
+    try:
+        # print("=== 上证指数日线 (Sina优先) ===")
+        # df_day = get_price("sh000001", frequency="1d", count=5)
+        # print(df_day)
+
+        # print("\n=== 平安银行15分钟线 (Sina优先) ===")
+        # df_min = get_price("000001.XSHE", frequency="15m", count=5)
+        # print(df_min)
+
+        # print("\n=== 腾讯1分钟线 (只有腾讯) ===")
+        # df_1m = get_price("sh000001", frequency="1m", count=5)
+        # print(df_1m)
+        df_1d = get_price_tx("sh000001", frequency="1d", count=5)
+        print(df_1d)
+    except Exception as e:
+        print(f"Test failed: {e}")

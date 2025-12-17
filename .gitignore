@@ -1,7 +1,9 @@
 .venv
 .vscode
 __pycache__
-data
+/data
 migrations
-.env
+/.env
 logs
+node_modules
+tmp
