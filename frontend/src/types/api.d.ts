@@ -23,13 +23,13 @@ export interface PageResult<T> {
   pageSize: number
 }
 
-
 // =====================================================================
 //                           总览
 // =====================================================================
 export type Overview = {
-  totalMarket: number,
-  rate: number
+  totalMarketValue: number
+  dailyReturn: number
+  dailyReturnRate: number
 }
 
 // =====================================================================
@@ -148,14 +148,13 @@ export interface KlineData {
 
 // K线图表数据格式（适配 ECharts）
 export interface ChartKLineData {
-  dates: string[];
-  values: number[][]; // [Open, Close, Low, High]
-  volumes: number[];
+  dates: string[]
+  values: number[][] // [Open, Close, Low, High]
+  volumes: number[]
 }
 // =====================================================================
 //                         实时行情（预留）
 // =====================================================================
-
 
 export interface MinuteData {
   time: string
@@ -168,15 +167,17 @@ export interface MinuteData {
 
 /** 实时行情数据 */
 export type RealtimeQuote = {
-  stockCode: string,
-  latestPrice: number,
-  preClose: number,
-  change: number,
-  changePercent: number,
-  open: number,
-  high: number,
-  low: number,
-  volume: number,
-  price: number,
+  code: string
+  latestPrice: number
+  preClose: number
+  change: number
+  changePercent: number
+  open: number
+  high: number
+  low: number
+  volume: number
+  holdingNum: number
+  marketValue: number
+  preMarketValue: number
   bars: MinuteData[]
 }

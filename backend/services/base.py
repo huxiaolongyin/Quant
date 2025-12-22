@@ -1,6 +1,6 @@
 """通用 CRUD Service 基类"""
 
-from typing import Generic, List, Optional, Type, TypeVar
+from typing import Generic, List, Type, TypeVar
 
 from pydantic import BaseModel
 from pydantic.main import IncEx
@@ -27,7 +27,7 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         page_size: int,
         search: Q = Q(),
         order: list[str] | None = None,
-        prefetch: Optional[List[str]] = None,
+        prefetch: List[str] | None = None,
         distinct: bool = False,
     ) -> tuple[int, list[ModelType]]:
         """

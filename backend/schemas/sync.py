@@ -1,5 +1,3 @@
-from typing import List, Literal, Optional
-
 from pydantic import Field
 
 from backend.enums.sync import SyncStatus, SyncType
@@ -7,7 +5,9 @@ from backend.enums.sync import SyncStatus, SyncType
 from .base import BaseSchema
 
 
-# --- 1. 同步概览 (Summary) 相关 ---
+# =====================================================================
+#                           同步概览 (Summary) 相关
+# =====================================================================
 class SchedulerInfo(BaseSchema):
     enabled: bool
     time: str  # 格式如 "17:30"
@@ -22,7 +22,9 @@ class SyncSummaryResponse(BaseSchema):
     status: SyncStatus
 
 
-# --- 2. 日志 (Logs) 相关 ---
+# =====================================================================
+#                           日志 (Logs) 相关
+# =====================================================================
 class SyncLogItem(BaseSchema):
     id: str
     type: SyncType
@@ -39,13 +41,10 @@ class SyncLogItem(BaseSchema):
 #     page_size: int
 
 
-# --- 3. 触发任务 (Trigger) 相关 ---
+# =====================================================================
+#                           触发任务 (Trigger) 相关
+# =====================================================================
 class TriggerRequest(BaseSchema):
     type: SyncType
     data_range: list
     payload: dict | None = None
-
-
-class TriggerResponse(BaseSchema):
-    success: bool
-    msg: str

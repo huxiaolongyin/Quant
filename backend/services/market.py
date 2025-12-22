@@ -3,7 +3,11 @@
 from tortoise.transactions import atomic
 
 from backend.models.market import WatchlistStock
-from backend.schemas.market import WatchlistStockCreate, WatchlistStockUpdate
+from backend.schemas.market import (
+    WatchlistStockCreate,
+    WatchlistStockResponse,
+    WatchlistStockUpdate,
+)
 
 from .base import BaseService
 
@@ -16,20 +20,24 @@ class WatchlistStockService(
     def __init__(self):
         super().__init__(WatchlistStock)
 
-    async def get_list(self, *args, **kwargs):
+    async def get_list(
+        self, *args, **kwargs
+    ) -> tuple[int, list[WatchlistStockResponse]]:
         kwargs.setdefault("prefetch", [])
         if "stock" not in kwargs["prefetch"]:
             kwargs["prefetch"].append("stock")
 
         total, items = await super().get_list(*args, **kwargs)
+
+        # 使用Pydantic模型序列化
         data = []
         for item in items:
-            item_dict = await item.to_dict()
-            # 从关联的 stock 获取字段
-            if item.stock:
-                item_dict["stockCode"] = item.stock.full_stock_code
-                item_dict["shortName"] = item.stock.short_name
-            data.append(item_dict)
+            item_data = {
+                **item.__dict__,
+                "stock_code": item.stock.full_stock_code if item.stock else None,
+                "short_name": item.stock.short_name if item.stock else None,
+            }
+            data.append(WatchlistStockResponse.model_validate(item_data))
 
         return total, data
 

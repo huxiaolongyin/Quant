@@ -1,13 +1,13 @@
 import datetime
-from functools import lru_cache
+from typing import List
 
 import pandas as pd
 import requests
+from cachetools import TTLCache, cached
 
 from backend.core.logger import logger
+from backend.schemas.market import MinuteBar, StockQuote
 from backend.utils import format_code
-from cachetools import cached, TTLCache
-
 
 # 全局 Session，复用 TCP 连接，统一 Header
 SESSION = requests.Session()
@@ -172,7 +172,7 @@ def get_price(code, end_date="", count=10, frequency="1d", fields=[]):
 
 
 @cached(cache=_today_minutes_cache)
-def _get_today_minutes(code: str) -> dict:
+def _get_today_minutes(code: str) -> tuple[float, List[MinuteBar]]:
     """
     获取单个股票最新交易日分钟数据（带60秒缓存）
 
@@ -201,77 +201,73 @@ def _get_today_minutes(code: str) -> dict:
     pre_close = df_previous["close"].iloc[-1] if not df_previous.empty else None
 
     # 构建分钟K线数据
-    bars = (
-        df_latest.rename_axis("datetime")
-        .reset_index()
-        .assign(time=lambda x: x["datetime"].dt.strftime("%H:%M"))[
-            ["time", "open", "close", "high", "low", "volume"]
-        ]
-        .to_dict("records")
-    )
+    bars = [
+        MinuteBar(
+            time=row["datetime"].strftime("%H:%M"),
+            open=row["open"],
+            close=row["close"],
+            high=row["high"],
+            low=row["low"],
+            volume=row["volume"],
+        )
+        for _, row in df_latest.reset_index(names="datetime").iterrows()
+    ]
 
     return pre_close, bars
 
 
 def get_price_quotes(
     holding_stocks: list[(str, str)], force_refresh: bool = False
-) -> list[dict[str, any]]:
+) -> list[StockQuote]:
     """
     获取多个股票今日分钟级别数据
 
     Args:
         holding_stocks: 股票代码列表，如 [('600519.SH', 100), ('000001.SZ', 200)]
         force_refresh: 是否强制刷新缓存
-
-    Returns:
-        {
-            "600519.SH": [{"time": "09:30", "open":100, "close": 1800.5}, ...],
-            "000001.SZ": [{"time": "09:30", "open":100, "close": 10.67}, ...]
-        }
     """
     # 强制刷新时清空缓存
-
     if force_refresh:
         _today_minutes_cache.clear()
 
     res = []
     for holding_stock in holding_stocks:
-        stock_name, holding_num = holding_stock
-        pre_close, bars = _get_today_minutes(stock_name)
+        code, holding_num = holding_stock
+        pre_close, bars = _get_today_minutes(code)
 
-        # 最新价
-        latest = bars[-1]
-        latest_price = latest["close"]
+        # 最新价格
+        latest_price = bars[-1].close
 
         # 计算涨跌
         change = round(latest_price - pre_close, 4)
         change_percent = round((change / pre_close) * 100, 2) if pre_close else 0
 
         # 汇总统计
-        total_volume = sum(bar["volume"] for bar in bars)
-        high = max(bar["close"] for bar in bars)
-        low = min(bar["close"] for bar in bars)
+        total_volume = sum(bar.volume for bar in bars)
+        high = max(bar.close for bar in bars)
+        low = min(bar.close for bar in bars)
 
         # 持仓市值
-        price = holding_num * latest_price
+        market_value = holding_num * latest_price
 
         # 昨日持仓市值
-        yesterday_price = holding_num * pre_close
+        pre_market_value = holding_num * pre_close
         res.append(
-            {
-                "stockCode": stock_name,
-                "latestPrice": latest_price,
-                "preClose": pre_close,
-                "change": change,
-                "changePercent": change_percent,
-                "open": bars[0]["open"],
-                "high": high,
-                "low": low,
-                "volume": total_volume,
-                "price": price,
-                "yesterdayPrice": yesterday_price,
-                "bars": bars,  # 分时明细
-            }
+            StockQuote(
+                code=code,
+                latest_price=latest_price,
+                pre_close=pre_close,
+                change=change,
+                change_percent=change_percent,
+                open=bars[0].open,
+                high=high,
+                low=low,
+                volume=total_volume,
+                holding_num=holding_num,
+                market_value=market_value,
+                pre_market_value=pre_market_value,
+                bars=bars,
+            )
         )
     return res
 

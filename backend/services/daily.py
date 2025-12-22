@@ -1,7 +1,6 @@
 """日线数据 Service"""
 
 from datetime import date
-from typing import Optional
 
 from backend.models.daily import DailyLine
 
@@ -17,8 +16,8 @@ class DailyLineService(BaseService[DailyLine, dict, dict]):
     async def get_history(
         self,
         stock_code: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
         limit: int = 250,
     ) -> list[DailyLine]:
         """

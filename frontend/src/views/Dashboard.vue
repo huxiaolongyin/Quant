@@ -4,12 +4,16 @@
 
     <!-- 概览卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+      <div
+        class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg"
+      >
         <p class="text-blue-100 text-sm mb-1">总市值</p>
-        <h3 class="text-3xl font-bold">￥ {{ formatePrice(overview.totalMarket) }}</h3>
+        <h3 class="text-3xl font-bold">
+          ￥ {{ formatePrice(overview.totalMarketValue) }}
+        </h3>
         <div class="mt-4 flex items-center text-sm">
           <span class="bg-white/20 px-2 py-1 rounded">
-            {{ formatRate(overview.rate) }} 今日
+            {{ formatRate(overview.dailyReturnRate) }} 今日
           </span>
         </div>
       </div>
@@ -36,9 +40,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { dashboardApi } from "@/api/dashboard"
-import { Overview } from '@/types/api'
-import { ref, onMounted } from "vue";
+import { dashboardApi } from "@/api/dashboard";
+import { Overview } from "@/types/api";
+import { onMounted, ref } from "vue";
 // =====================================================================
 //                       1. 组件定义与 Props
 // =====================================================================
@@ -47,9 +51,10 @@ import { ref, onMounted } from "vue";
 //                       2. 状态与引用
 // =====================================================================
 const overview = ref<Overview>({
-  totalMarket: 0,
-  rate: 0
-})
+  totalMarketValue: 0,
+  dailyReturn: 0,
+  dailyReturnRate: 0,
+});
 
 // =====================================================================
 //                       3. 计算属性
@@ -59,21 +64,21 @@ const overview = ref<Overview>({
 //                       4. 方法与逻辑
 // =====================================================================
 const fetchOverview = async () => {
-  const result = await dashboardApi.getOverview()
-  overview.value = result.data
-}
+  const result = await dashboardApi.getOverview();
+  overview.value = result.data;
+};
 function formatePrice(price: number) {
-  return price.toFixed(2)
+  return price.toFixed(2);
 }
 
 function formatRate(rate: number) {
-  const percent = (rate * 100).toFixed(2)
-  return rate >= 0 ? `+${percent}%` : `${percent}%`
+  const percent = (rate * 100).toFixed(2);
+  return rate >= 0 ? `+${percent}%` : `${percent}%`;
 }
 // =====================================================================
 //                       5. 生命周期与监听
 // =====================================================================
 onMounted(() => {
-  fetchOverview()
-})
+  fetchOverview();
+});
 </script>

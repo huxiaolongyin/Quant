@@ -1,32 +1,38 @@
 """自选行情，关注自选股票的实时/历史行情展示"""
 
 from datetime import date
-from typing import Literal, Optional
+from typing import List, Literal
 
+from aiocache import Cache, cached
 from fastapi import APIRouter, HTTPException, Query, status
 
-from backend.schemas.base import BaseResponse, PaginatedResponse
+from backend.core.provider import get_price_quotes
+from backend.models.stock import Stock
+from backend.schemas.base import BaseResponse, OptionItem, PaginatedResponse
 from backend.schemas.market import (
+    DateBar,
+    StockQuote,
     WatchlistStockCreate,
     WatchlistStockReorder,
     WatchlistStockResponse,
     WatchlistStockUpdate,
 )
-from backend.core.provider import get_price_quotes
 from backend.services.daily import daily_line_service
 from backend.services.market import watchlist_stock_service
-from backend.models.stock import Stock
-from aiocache import cached, Cache
 
 router = APIRouter()
 
 
-@router.get("/options", summary="获取可选股票列表")
+@router.get(
+    "/options",
+    response_model=BaseResponse[List[OptionItem]],
+    summary="获取可选股票列表",
+)
 @cached(ttl=300, cache=Cache.MEMORY)
 async def get_stock_list():
     stocks = await Stock.all()
     data = [{"value": stock.id, "label": stock.full_stock_code} for stock in stocks]
-    return BaseResponse.success(data=data)
+    return BaseResponse[List[OptionItem]].success(data=data)
 
 
 @router.get(
@@ -37,7 +43,7 @@ async def get_stock_list():
 async def get_watchlist(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
-    # keyword: Optional[str] = Query(None, description="搜索关键词"),
+    # keyword: str | None = Query(None, description="搜索关键词"),
 ):
     total, items = await watchlist_stock_service.get_list(
         page=page, page_size=page_size
@@ -52,27 +58,13 @@ async def get_watchlist(
 
 @router.get(
     "/realtime",
-    # response_model=BaseResponse[list[RealtimeQuoteResponse]],
+    response_model=BaseResponse[list[StockQuote]],
     summary="获取自选股票实时行情列表",
 )
 async def get_realtime_stock_data(
     force_refresh: bool = Query(False, description="是否强制刷新", alias="forceRefresh")
 ):
-    """
-    获取所有自选股票的实时行情数据
-
-    返回字段：
-    - name: 股票名称
-    - price: 当前价格
-    - change: 涨跌额
-    - change_pct: 涨跌幅(%)
-    - open: 开盘价
-    - high: 最高价
-    - low: 最低价
-    - pre_close: 昨收价
-    - volume: 成交量(股)
-    - amount: 成交额(元)
-    """
+    """获取所有自选股票的实时行情数据"""
     # 1. 获取所有自选股票
     _, items = await watchlist_stock_service.get_list(page=1, page_size=100)
 
@@ -80,11 +72,11 @@ async def get_realtime_stock_data(
         return BaseResponse.success(data=[])
 
     # 2. 预加载关联的 stock 信息，收集股票代码
-    holding_stocks = [(item.get("stockCode"), item.get("holdingNum")) for item in items]
+    holding_stocks = [(item.stock_code, item.holding_num) for item in items]
 
     stock_quotes = get_price_quotes(holding_stocks, force_refresh)
 
-    return BaseResponse.success(data=stock_quotes)
+    return BaseResponse[list[StockQuote]].success(data=stock_quotes)
 
 
 @router.get(
@@ -100,7 +92,9 @@ async def get_watchlist_stock(id: int):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="自选股票不存在",
         )
-    return BaseResponse.success(data=WatchlistStockResponse.model_validate(item))
+    return BaseResponse[WatchlistStockResponse].success(
+        data=WatchlistStockResponse.model_validate(item)
+    )
 
 
 @router.post(
@@ -121,7 +115,9 @@ async def create_watchlist_stock(data: WatchlistStockCreate):
     item = await watchlist_stock_service.create(data)
     # 重新查询以获取关联数据
     item = await watchlist_stock_service.get(item.id)
-    return BaseResponse.success(data=WatchlistStockResponse.model_validate(item))
+    return BaseResponse[WatchlistStockResponse].success(
+        data=WatchlistStockResponse.model_validate(item)
+    )
 
 
 @router.put(
@@ -138,7 +134,9 @@ async def update_watchlist_stock(id: int, data: WatchlistStockUpdate):
             detail="自选股票不存在",
         )
     item = await watchlist_stock_service.get(id)
-    return BaseResponse.success(data=WatchlistStockResponse.model_validate(item))
+    return BaseResponse[WatchlistStockResponse].success(
+        data=WatchlistStockResponse.model_validate(item)
+    )
 
 
 @router.delete(
@@ -165,15 +163,17 @@ async def delete_watchlist_stock(id: int):
 async def reorder_watchlist(data: WatchlistStockReorder):
     """调整自选股票排序"""
     updated = await watchlist_stock_service.reorder(data.items)
-    return BaseResponse.success(data={"updated": updated})
+    return BaseResponse[dict].success(data={"updated": updated})
 
 
-@router.get("/{id}/history", summary="获取单只股票历史行情")
+@router.get(
+    "/{id}/history", response_model=BaseResponse, summary="获取单只股票历史行情"
+)
 async def get_history_quotes(
     id: int,
     period: Literal["daily", "weekly", "monthly"] = "daily",
-    start_date: Optional[date] = Query(None, description="开始日期"),
-    end_date: Optional[date] = Query(None, description="结束日期"),
+    start_date: date | None = Query(None, description="开始日期"),
+    end_date: date | None = Query(None, description="结束日期"),
     limit: int = Query(250, ge=1, le=1000, description="返回数量"),
 ):
     """
@@ -205,16 +205,33 @@ async def get_history_quotes(
 
     # 3. 根据 period 处理
     if period == "daily":
-        return BaseResponse.success(data=[await d.to_dict() for d in daily_data])
+        # 将日线数据转换为 DateBar 对象
+        date_bars = [
+            DateBar(
+                stock_code=d.stock_code,
+                trade_date=d.trade_date,
+                open=d.open,
+                high=d.high,
+                low=d.low,
+                close=d.close,
+                volume=d.volume,
+                turnover=d.turnover,
+            )
+            for d in daily_data
+        ]
+        return BaseResponse[List[DateBar]].success(data=date_bars)
 
-    return BaseResponse.success(data=_aggregate_kline(daily_data, period, limit))
+    return BaseResponse[List[DateBar]].success(
+        data=_aggregate_kline(stock_code, daily_data, period, limit)
+    )
 
 
 def _aggregate_kline(
+    stock_code: str,
     daily_data: list,
     period: Literal["weekly", "monthly"],
     limit: int,
-) -> list[dict]:
+) -> list[DateBar]:
     """将日线聚合为周线/月线"""
     from collections import defaultdict
     from decimal import Decimal
@@ -235,15 +252,16 @@ def _aggregate_kline(
     for key in sorted(groups.keys(), reverse=True)[:limit]:
         items = sorted(groups[key], key=lambda x: x.trade_date)
         result.append(
-            {
-                "tradeDate": items[-1].trade_date,  # 取最后一个交易日
-                "open": items[0].open,
-                "close": items[-1].close,
-                "high": max(i.high for i in items),
-                "low": min(i.low for i in items),
-                "volume": sum(i.volume for i in items),
-                "turnover": sum(i.turnover or Decimal(0) for i in items),
-            }
+            DateBar(
+                stock_code=stock_code,
+                trade_date=items[-1].trade_date,
+                open=items[0].open,
+                close=items[-1].close,
+                high=max(i.high for i in items),
+                low=min(i.low for i in items),
+                volume=sum(i.volume for i in items),
+                turnover=sum(i.turnover or Decimal(0) for i in items),
+            )
         )
 
     return result[::-1]

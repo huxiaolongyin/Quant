@@ -104,6 +104,7 @@ def get_previous_workday(date=None):
 
 def send_email(subject: str, body: str, to_email: str = ""):
     """使用SMTP发送邮件"""
+
     msg = MIMEMultipart()
     from_email = config.SMTP_USER
     if not to_email:
@@ -128,3 +129,46 @@ def send_email(subject: str, body: str, to_email: str = ""):
         logger.error("Error sending email:", e)
     finally:
         server.quit()
+
+
+def to_camel_case(string: str) -> str:
+    """
+    将下划线命名（snake_case）转换为小驼峰命名（camelCase）
+
+    Args:
+        string: 下划线分隔的字符串
+
+    Returns:
+        小驼峰命名的字符串
+
+    Examples:
+        >>> to_camel_case("user_name")
+        'userName'
+        >>> to_camel_case("created_at")
+        'createdAt'
+        >>> to_camel_case("id")
+        'id'
+    """
+    components = string.split("_")
+    return components[0] + "".join(word.capitalize() for word in components[1:])
+
+
+def to_snake_case(string: str) -> str:
+    """
+    将驼峰命名（camelCase）转换为下划线命名（snake_case）
+
+    Args:
+        string: 驼峰命名的字符串
+
+    Returns:
+        下划线分隔的字符串
+
+    Examples:
+        >>> to_snake_case("userName")
+        'user_name'
+        >>> to_snake_case("createdAt")
+        'created_at'
+    """
+    import re
+
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", string).lower()

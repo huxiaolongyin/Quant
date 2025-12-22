@@ -1,64 +1,11 @@
 """通用 Schema 基类"""
 
 from datetime import datetime
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, List, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
-# =====================================================================
-#                            工具函数
-# =====================================================================
-
-
-def to_camel_case(string: str) -> str:
-    """
-    将下划线命名（snake_case）转换为小驼峰命名（camelCase）
-
-    Args:
-        string: 下划线分隔的字符串
-
-    Returns:
-        小驼峰命名的字符串
-
-    Examples:
-        >>> to_camel_case("user_name")
-        'userName'
-        >>> to_camel_case("created_at")
-        'createdAt'
-        >>> to_camel_case("id")
-        'id'
-    """
-    components = string.split("_")
-    return components[0] + "".join(word.capitalize() for word in components[1:])
-
-
-def to_snake_case(string: str) -> str:
-    """
-    将驼峰命名（camelCase）转换为下划线命名（snake_case）
-
-    Args:
-        string: 驼峰命名的字符串
-
-    Returns:
-        下划线分隔的字符串
-
-    Examples:
-        >>> to_snake_case("userName")
-        'user_name'
-        >>> to_snake_case("createdAt")
-        'created_at'
-    """
-    import re
-
-    return re.sub(r"(?<!^)(?=[A-Z])", "_", string).lower()
-
-
-class TimestampMixin(BaseModel):
-    """时间戳 Mixin"""
-
-    created_at: datetime
-    updated_at: datetime
-
+from backend.utils import to_camel_case
 
 # =====================================================================
 #                           基础配置类
@@ -247,16 +194,16 @@ class SortParams(BaseSchema):
             ...
     """
 
-    sort_by: Optional[str] = Field(
+    sort_by: str | None = Field(
         default=None, description="排序字段", examples=["created_at"]
     )
-    sort_order: Optional[str] = Field(
+    sort_order: str | None = Field(
         default="desc", description="排序方向: asc-升序, desc-降序", examples=["desc"]
     )
 
     @field_validator("sort_order")
     @classmethod
-    def validate_sort_order(cls, v: Optional[str]) -> Optional[str]:
+    def validate_sort_order(cls, v: str | None) -> str | None:
         """验证排序方向只能是 asc 或 desc"""
         if v is not None and v.lower() not in ("asc", "desc"):
             raise ValueError("排序方向只能是 asc 或 desc")
@@ -288,14 +235,14 @@ class BaseResponse(BaseSchema, Generic[T]):
         error: 快速创建错误响应
 
     Examples:
-        # 方式1：直接实例化
+        >>> 方式1：直接实例化
         return BaseResponse(data={"id": 1, "name": "test"})
 
-        # 方式2：使用类方法
+        >>> 方式2：使用类方法
         return BaseResponse.success(data=user_dict)
         return BaseResponse.error(message="用户不存在", code=404)
 
-        # 方式3：带类型提示（推荐用于文档生成）
+        >>> 方式3：带类型提示（推荐用于文档生成）
         return BaseResponse[UserSchema](data=user)
     """
 
@@ -303,37 +250,20 @@ class BaseResponse(BaseSchema, Generic[T]):
     message: str = Field(
         default="success", description="响应消息", examples=["success"]
     )
-    data: Optional[T] = Field(default=None, description="响应数据")
+    data: T | None = Field(default=None, description="响应数据")
 
     @classmethod
-    def success(cls, data: T = None, message: str = "success") -> "BaseResponse[T]":
-        """
-        创建成功响应
-
-        Args:
-            data: 响应数据
-            message: 成功消息，默认为 "success"
-
-        Returns:
-            ApiResponse 实例
-        """
+    def success(
+        cls, data: T | None = None, message: str = "success"
+    ) -> "BaseResponse[T]":
+        """创建成功响应"""
         return cls(code=200, message=message, data=data)
 
     @classmethod
     def error(
-        cls, message: str = "error", code: int = 400, data: T = None
+        cls, message: str = "error", code: int = 400, data: T | None = None
     ) -> "BaseResponse[T]":
-        """
-        创建错误响应
-
-        Args:
-            message: 错误消息
-            code: 错误码，默认 400
-            data: 附加数据（可选）
-
-        Returns:
-            ApiResponse 实例
-        """
+        """创建错误响应 - 错误时通常不返回业务数据"""
         return cls(code=code, message=message, data=data)
 
 
@@ -452,7 +382,7 @@ class PaginatedResponse(BaseResponse[PaginatedData[T]], Generic[T]):
         items: List[T],
         total: int,
         page: int = 1,
-        page_size: int = 20,
+        page_size: int = 10,
         message: str = "success",
     ) -> "PaginatedResponse[T]":
         """
@@ -473,3 +403,11 @@ class PaginatedResponse(BaseResponse[PaginatedData[T]], Generic[T]):
             message=message,
             data=PaginatedData.create(items, total, page, page_size),
         )
+
+
+# =====================================================================
+#                           通用响应
+# =====================================================================
+class OptionItem(BaseSchema):
+    label: str = Field(examples=["标签1"])
+    value: int = Field(examples=[1])

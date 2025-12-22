@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Query
 
 from backend.schemas import (
     BaseResponse,
@@ -6,7 +6,6 @@ from backend.schemas import (
     SyncLogItem,
     SyncSummaryResponse,
     TriggerRequest,
-    TriggerResponse,
 )
 from backend.services.sync import sync_service
 
@@ -19,7 +18,9 @@ router = APIRouter()
     summary="获取同步状态概览",
 )
 async def get_sync_summary():
-    return BaseResponse(data=await sync_service.get_summary())
+    return BaseResponse[SyncSummaryResponse].success(
+        data=await sync_service.get_summary()
+    )
 
 
 @router.get(
@@ -32,14 +33,14 @@ async def get_sync_logs(
     page_size: int = Query(10, ge=1, le=100, description="每页数量", alias="pageSize"),
 ):
 
-    return BaseResponse(
+    return BaseResponse.success(
         data=await sync_service.get_logs(page=page, page_size=page_size)
     )
 
 
 @router.post(
     "/trigger",
-    response_model=TriggerResponse,
+    response_model=BaseResponse,
     summary="触发同步任务",
 )
 async def trigger_sync_task(body: TriggerRequest, background_tasks: BackgroundTasks):
@@ -51,7 +52,7 @@ async def trigger_sync_task(body: TriggerRequest, background_tasks: BackgroundTa
             payload=body.payload,
         )
 
-        return TriggerResponse(success=True, msg="任务已提交到后台队列")
+        return BaseResponse.success(message="任务已提交到后台队列")
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return BaseResponse.error(message=str(e))
