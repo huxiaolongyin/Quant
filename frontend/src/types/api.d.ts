@@ -1,5 +1,40 @@
 import { SyncType } from 'enums'
+// =====================================================================
+//                           基础
+// =====================================================================
 
+export interface ApiResponse<T = any> {
+  code: number
+  data: T
+  message: string
+}
+
+// 分页请求
+export interface PageParams {
+  page: number
+  pageSize: number
+}
+
+// 分页响应
+export interface PageResult<T> {
+  list: T[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+
+// =====================================================================
+//                           总览
+// =====================================================================
+export type Overview = {
+  totalMarket: number,
+  rate: number
+}
+
+// =====================================================================
+//                           数据同步
+// =====================================================================
 export interface SyncScheduler {
   enabled: boolean
   time: string
@@ -21,26 +56,6 @@ export interface SyncLog {
   startTime: string
   duration: string
   status: 'success' | 'fail' | 'running'
-}
-
-// 分页请求
-export interface PageParams {
-  page: number
-  pageSize: number
-}
-
-// 分页响应
-export interface PageResult<T> {
-  list: T[]
-  total: number
-  page: number
-  pageSize: number
-}
-
-export interface ApiResponse<T = any> {
-  code: number
-  data: T
-  message: string
 }
 
 // 请求配置扩展
@@ -131,22 +146,37 @@ export interface KlineData {
   turnover?: number | string
 }
 
+// K线图表数据格式（适配 ECharts）
+export interface ChartKLineData {
+  dates: string[];
+  values: number[][]; // [Open, Close, Low, High]
+  volumes: number[];
+}
 // =====================================================================
 //                         实时行情（预留）
 // =====================================================================
 
-/** 实时行情数据 */
-export interface RealtimeQuote {
-  stockCode: string
-  stockName: string
-  price: number
-  change: number
-  changePercent: number
+
+export interface MinuteData {
+  time: string
   open: number
-  high: number
+  close: number
+  hight: number
   low: number
-  preClose: number
   volume: number
-  turnover: number
-  updateTime: string
+}
+
+/** 实时行情数据 */
+export type RealtimeQuote = {
+  stockCode: string,
+  latestPrice: number,
+  preClose: number,
+  change: number,
+  changePercent: number,
+  open: number,
+  high: number,
+  low: number,
+  volume: number,
+  price: number,
+  bars: MinuteData[]
 }

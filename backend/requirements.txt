@@ -14,3 +14,5 @@ optuna
 fastapi
 loguru
 uvicorn
+cachetools
+aiocache

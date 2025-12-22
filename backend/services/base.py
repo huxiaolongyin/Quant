@@ -133,3 +133,4 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         obj = await self.get(id=id)
         await obj.delete()
+        return True

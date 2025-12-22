@@ -1,13 +1,9 @@
 <template>
   <div class="p-6">
-    <a-card
-      class="rounded-xl shadow-sm border-gray-100"
-      :bordered="false"
-      title="自选股列表"
-    >
+    <a-card class="rounded-xl shadow-sm border-gray-100" :bordered="false" title="自选股列表">
       <template #extra>
         <a-space>
-          <a-button @click="fetchList">
+          <a-button @click="handleRefresh(true)">
             <template #icon><icon-refresh /></template>
             刷新
           </a-button>
@@ -18,15 +14,8 @@
         </a-space>
       </template>
 
-      <a-table
-        :data="stocks"
-        :loading="loading"
-        :pagination="false"
-        :bordered="{ wrapper: false, cell: false }"
-        row-key="id"
-        class="mt-2"
-        :hoverable="true"
-      >
+      <a-table :data="stocks" :loading="loading" :pagination="false" :bordered="{ wrapper: false, cell: false }"
+        row-key="id" class="mt-2" :hoverable="true">
         <template #columns>
           <a-table-column title="代码" data-index="stockCode">
             <template #cell="{ record }">
@@ -45,28 +34,24 @@
 
           <a-table-column title="最新价" data-index="price" align="right">
             <template #cell="{ record }">
-              <span
-                class="font-mono font-medium text-base"
-                :class="getColor(getRealtimeData(record.code)?.change ?? 0)"
-              >
-                {{ formatPrice(getRealtimeData(record.code)?.price) }}
+              <span class="font-mono font-medium text-base"
+                :class="getColor(getRealtimeData(record.stockCode)?.latestPrice ?? 0)">
+                {{ formatPrice(getRealtimeData(record.stockCode)?.latestPrice) }}
               </span>
             </template>
           </a-table-column>
           <a-table-column title="涨跌幅" data-index="change" align="right">
             <template #cell="{ record }">
-              <span
-                class="font-mono font-medium"
-                :class="getColor(getRealtimeData(record.code)?.changePercent ?? 0)"
-              >
-                {{ formatChange(getRealtimeData(record.code)?.changePercent) }}
+              <span class="font-mono font-medium"
+                :class="getColor(getRealtimeData(record.stockCode)?.changePercent ?? 0)">
+                {{ formatChange(getRealtimeData(record.stockCode)?.changePercent) }}
               </span>
             </template>
           </a-table-column>
           <a-table-column title="成交量" data-index="volume" align="right">
             <template #cell="{ record }">
               <span class="text-gray-500 text-sm">
-                {{ formatVolume(getRealtimeData(record.code)?.volume) }}
+                {{ formatVolume(getRealtimeData(record.stockCode)?.volume) }}
               </span>
             </template>
           </a-table-column>
@@ -80,28 +65,18 @@
           <a-table-column title="持仓市值" align="right">
             <template #cell="{ record }">
               <span class="text-gray-800 font-mono font-medium">
-                {{ formatMarketValue(record, getRealtimeData(record.code)?.price) }}
+                {{ formatMarketValue(record, getRealtimeData(record.stockCode)?.price) }}
               </span>
             </template>
           </a-table-column>
           <a-table-column title="操作" align="center" :width="240">
             <template #cell="{ record }">
               <a-space>
-                <a-button
-                  type="text"
-                  status="success"
-                  size="small"
-                  @click="showDetail(record)"
-                >
+                <a-button type="text" status="success" size="small" @click="showDetail(record)">
                   <template #icon><icon-bar-chart /></template>
                   分析
                 </a-button>
-                <a-button
-                  type="text"
-                  status="normal"
-                  size="small"
-                  @click="openModal(record)"
-                >
+                <a-button type="text" status="normal" size="small" @click="openModal(record)">
                   <template #icon><icon-edit /></template>
                   编辑
                 </a-button>
@@ -118,61 +93,32 @@
       </a-table>
     </a-card>
 
-    <a-modal
-      v-model:visible="modalVisible"
-      :title="isEditMode ? '编辑自选股' : '添加自选股'"
-      :ok-loading="submitLoading"
-      @ok="handleStock"
-      @cancel="modalVisible = false"
-    >
+    <a-modal v-model:visible="modalVisible" :title="isEditMode ? '编辑自选股' : '添加自选股'" :ok-loading="submitLoading"
+      @ok="handleStock" @cancel="modalVisible = false">
       <a-form :model="formData" layout="vertical">
         <a-form-item field="stockId" label="股票ID" v-if="!isEditMode">
-          <a-input-number
-            v-model="formData.stockId"
-            placeholder="请输入股票ID"
-            :min="1"
-            style="width: 100%"
-          />
+          <a-select v-model="formData.stockId" placeholder="请输入股票代码搜索" style="width: 100%"
+            :options="filteredStockOptions" :allow-search="true" :filter-option="false" @search="handleStockSearch"
+            :loading="searchLoading" />
         </a-form-item>
         <a-form-item field="holdingNum" label="持有股数">
-          <a-input-number
-            v-model="formData.holdingNum"
-            mode="button"
-            :step="100"
-            :min="0"
-            placeholder="请输入持有数量"
-            style="width: 100%"
-          />
+          <a-input-number v-model="formData.holdingNum" mode="button" :step="100" :min="0" placeholder="请输入持有数量"
+            style="width: 100%" />
         </a-form-item>
         <a-form-item field="costPrice" label="持仓成本价">
-          <a-input-number
-            v-model="formData.costPrice"
-            :precision="2"
-            :min="0"
-            placeholder="请输入买入均价"
-            style="width: 100%"
-          >
+          <a-input-number v-model="formData.costPrice" :precision="3" :min="0" placeholder="请输入买入均价"
+            style="width: 100%">
             <template #prefix>¥</template>
           </a-input-number>
         </a-form-item>
         <a-form-item field="notes" label="备注">
-          <a-textarea
-            v-model="formData.notes"
-            placeholder="可选备注信息"
-            :max-length="200"
-          />
+          <a-textarea v-model="formData.notes" placeholder="可选备注信息" :max-length="200" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- 详情 Drawer -->
-    <a-drawer
-      :width="900"
-      :visible="detailVisible"
-      @cancel="detailVisible = false"
-      :footer="false"
-      unmountOnClose
-    >
+    <a-drawer :width="900" :visible="detailVisible" @cancel="detailVisible = false" :footer="false" unmountOnClose>
       <template #title>
         <div v-if="currentStock" class="flex items-center space-x-3">
           <span class="text-xl font-bold text-gray-800">{{
@@ -181,10 +127,8 @@
           <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded font-mono">
             {{ currentStock.stockCode }}
           </span>
-          <span
-            class="font-mono font-bold"
-            :class="getColor(getRealtimeData(currentStock.stockCode)?.changePercent ?? 0)"
-          >
+          <span class="font-mono font-bold"
+            :class="getColor(getRealtimeData(currentStock.stockCode)?.changePercent ?? 0)">
             {{ formatPrice(getRealtimeData(currentStock.stockCode)?.price) }}
             ({{ formatChange(getRealtimeData(currentStock.stockCode)?.changePercent) }})
           </span>
@@ -193,36 +137,25 @@
 
       <div class="h-full flex flex-col">
         <!-- 周期切换 -->
-        <a-tabs
-          type="rounded"
-          v-model:active-key="chartPeriod"
-          @change="handlePeriodChange"
-        >
+        <a-tabs type="rounded" v-model:active-key="chartPeriod" @change="handlePeriodChange">
           <a-tab-pane key="daily" title="日K"></a-tab-pane>
           <a-tab-pane key="weekly" title="周K"></a-tab-pane>
           <a-tab-pane key="monthly" title="月K"></a-tab-pane>
         </a-tabs>
 
         <!-- ECharts 组件容器 -->
-        <div
-          class="flex-1 bg-white rounded-lg border border-gray-200 mt-4 p-2 min-h-[400px]"
-        >
+        <div class="flex-1 bg-white rounded-lg border border-gray-200 mt-4 p-2 min-h-[400px]">
           <a-spin :loading="chartLoading" class="w-full h-full">
             <KLineChart v-if="chartData" :data="chartData" />
-            <div
-              v-else
-              class="h-full flex items-center justify-center text-gray-400 min-h-[400px]"
-            >
+            <div v-else class="h-full flex items-center justify-center text-gray-400 min-h-[400px]">
               暂无数据
             </div>
           </a-spin>
         </div>
 
         <!-- 盘口信息 -->
-        <div v-if="currentStock" class="mt-4 grid grid-cols-2 gap-4 h-48">
-          <div
-            class="bg-red-50 p-3 rounded border border-red-100 flex flex-col justify-between"
-          >
+        <!-- <div v-if="currentStock" class="mt-4 grid grid-cols-2 gap-4 h-48">
+          <div class="bg-red-50 p-3 rounded border border-red-100 flex flex-col justify-between">
             <div class="text-xs text-red-500 font-bold border-b border-red-200 pb-1">
               卖盘 (Ask)
             </div>
@@ -241,9 +174,7 @@
               </span>
             </div>
           </div>
-          <div
-            class="bg-green-50 p-3 rounded border border-green-100 flex flex-col justify-between"
-          >
+          <div class="bg-green-50 p-3 rounded border border-green-100 flex flex-col justify-between">
             <div class="text-xs text-green-500 font-bold border-b border-green-200 pb-1">
               买盘 (Bid)
             </div>
@@ -262,7 +193,7 @@
               </span>
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </a-drawer>
   </div>
@@ -271,7 +202,7 @@
 <script setup lang="ts">
 import { marketApi } from "@/api/market";
 import KLineChart from "@/components/Charts/KLineChart.vue";
-import type { KlineData, KlinePeriod, RealtimeQuote, WatchlistStock } from "@/types/api";
+import type { KlineData, ChartKLineData, KlinePeriod, RealtimeQuote, WatchlistStock } from "@/types/api";
 import { Message } from "@arco-design/web-vue";
 import {
   IconBarChart,
@@ -280,14 +211,7 @@ import {
   IconPlus,
   IconRefresh,
 } from "@arco-design/web-vue/es/icon";
-import { computed, onMounted, reactive, ref } from "vue";
-
-// K线图表数据格式（适配 ECharts）
-interface ChartKLineData {
-  dates: string[];
-  values: number[][]; // [Open, Close, Low, High]
-  volumes: number[];
-}
+import { onMounted, onUnmounted, reactive, ref } from "vue";
 
 // =====================================================================
 //                       1. 组件定义与 Props
@@ -301,11 +225,6 @@ const submitLoading = ref(false);
 const chartLoading = ref(false);
 const stocks = ref<WatchlistStock[]>([]);
 const realtimeQuotes = ref<RealtimeQuote[]>([]);
-const realtimeMap = computed(() => {
-  const map = new Map<string, RealtimeQuote>();
-  realtimeQuotes.value.forEach((q) => map.set(q.stockCode, q));
-  return map;
-});
 
 const isEditMode = ref(false);
 const modalVisible = ref(false);
@@ -316,11 +235,26 @@ const formData = reactive({
   costPrice: 0,
   notes: "",
 });
-
+const defaultQuote = {
+  stockCode: "",
+  latestPrice: 0,
+  preClose: 0,
+  change: 0,
+  changePercent: 0,
+  open: 0,
+  high: 0,
+  low: 0,
+  volume: 0,
+  price: 0,
+  bars: [],
+};
 const detailVisible = ref(false);
 const currentStock = ref<WatchlistStock | null>(null);
 const chartPeriod = ref<KlinePeriod>("daily");
 const chartData = ref<ChartKLineData | null>(null);
+const allStockOptions = ref([]); // 存储所有选项
+const filteredStockOptions = ref([]); // 展示的选项
+const searchLoading = ref(false);
 
 // =====================================================================
 //                       3. 计算属性
@@ -329,11 +263,17 @@ const chartData = ref<ChartKLineData | null>(null);
 // =====================================================================
 //                       4. 方法与逻辑
 // =====================================================================
+// 设置颜色
 const getColor = (val: number) =>
   val > 0 ? "text-red-500" : val < 0 ? "text-green-500" : "text-gray-900";
 
-const getRealtimeData = (code: string) => realtimeMap.value.get(code);
+const getRealtimeData = (stockCode: string) => {
+  const result: RealtimeQuote =
+    realtimeQuotes.value.find((item) => item.stockCode === stockCode) ?? defaultQuote;
+  return result;
+};
 
+// 格式化价格
 const formatPrice = (price?: number) => (price ? price.toFixed(2) : "-");
 
 const formatChange = (change?: number) => {
@@ -350,8 +290,8 @@ const formatVolume = (volume?: number) => {
 
 const formatMarketValue = (record: WatchlistStock, price?: number) => {
   if (!record.holdingNum || !price) return "-";
-  return (price * record.holdingNum).toLocaleString("zh-CN", {
-    minimumFractionDigits: 2,
+  return price.toLocaleString("zh-CN", {
+    minimumFractionDigits: 0,
   });
 };
 
@@ -389,12 +329,17 @@ const fetchList = async () => {
   }
 };
 
-const fetchRealtime = async () => {
+const fetchRealtime = async (forceRefresh: Boolean = false) => {
   try {
-    realtimeQuotes.value = await marketApi.getRealtime();
+    realtimeQuotes.value = (await marketApi.getRealtime(forceRefresh)).data;
   } catch (error) {
     console.error("获取实时行情失败", error);
   }
+};
+
+const handleRefresh = (forceRefresh: boolean = false) => {
+  fetchList();
+  fetchRealtime(forceRefresh);
 };
 
 const fetchHistory = async (id: number, period: KlinePeriod) => {
@@ -468,7 +413,7 @@ const handleStock = async () => {
       Message.success("添加成功");
     }
     modalVisible.value = false;
-    fetchList();
+    handleRefresh(true);
   } catch (error) {
     Message.error(isEditMode.value ? "更新失败" : "添加失败");
   } finally {
@@ -480,17 +425,58 @@ const deleteStock = async (id: number) => {
   try {
     await marketApi.delete(id);
     Message.success("删除成功");
-    fetchList();
+    handleRefresh(true);
   } catch (error) {
     Message.error("删除失败");
   }
 };
 
+// 获取股票列表
+const fethcStockOption = async () => {
+  const result: any = await marketApi.getOptions();
+  allStockOptions.value = result.data;
+};
+
+// 防抖搜索
+let searchTimer: number | null = null;
+const handleStockSearch = (value: string) => {
+  if (searchTimer) window.clearTimeout(searchTimer);
+
+  if (!value) {
+    filteredStockOptions.value = [];
+    return;
+  }
+
+  searchLoading.value = true;
+  searchTimer = window.setTimeout(() => {
+    const keyword = value.toLowerCase();
+    filteredStockOptions.value = allStockOptions.value
+      .filter((item: any) => item.label.toLowerCase().includes(keyword))
+      .slice(0, 50);
+    searchLoading.value = false;
+  }, 300);
+};
+
 // =====================================================================
 //                       5. 生命周期与监听
 // =====================================================================
+let refreshTimer: number | null = null;
+
 onMounted(() => {
-  fetchList();
-  fetchRealtime();
+  handleRefresh();
+  fethcStockOption();
+
+  // 每5分钟自动刷新
+  refreshTimer = window.setInterval(() => {
+    handleRefresh(true);
+  }, 5 * 60 * 1000);
+});
+
+onUnmounted(() => {
+  // 组件卸载时清除定时器
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
 });
 </script>

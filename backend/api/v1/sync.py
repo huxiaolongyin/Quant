@@ -8,7 +8,7 @@ from backend.schemas import (
     TriggerRequest,
     TriggerResponse,
 )
-from backend.services.sync import SyncService
+from backend.services.sync import sync_service
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ router = APIRouter()
     summary="获取同步状态概览",
 )
 async def get_sync_summary():
-    return BaseResponse(data=await SyncService.get_summary())
+    return BaseResponse(data=await sync_service.get_summary())
 
 
 @router.get(
@@ -32,7 +32,9 @@ async def get_sync_logs(
     page_size: int = Query(10, ge=1, le=100, description="每页数量", alias="pageSize"),
 ):
 
-    return BaseResponse(data=await SyncService.get_logs(page=page, page_size=page_size))
+    return BaseResponse(
+        data=await sync_service.get_logs(page=page, page_size=page_size)
+    )
 
 
 @router.post(
@@ -44,7 +46,7 @@ async def trigger_sync_task(body: TriggerRequest, background_tasks: BackgroundTa
 
     try:
         background_tasks.add_task(
-            SyncService.trigger_task,
+            sync_service.trigger_task,
             type=body.type,
             payload=body.payload,
         )

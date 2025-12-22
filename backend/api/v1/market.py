@@ -12,10 +12,21 @@ from backend.schemas.market import (
     WatchlistStockResponse,
     WatchlistStockUpdate,
 )
+from backend.core.provider import get_price_quotes
 from backend.services.daily import daily_line_service
 from backend.services.market import watchlist_stock_service
+from backend.models.stock import Stock
+from aiocache import cached, Cache
 
 router = APIRouter()
+
+
+@router.get("/options", summary="获取可选股票列表")
+@cached(ttl=300, cache=Cache.MEMORY)
+async def get_stock_list():
+    stocks = await Stock.all()
+    data = [{"value": stock.id, "label": stock.full_stock_code} for stock in stocks]
+    return BaseResponse.success(data=data)
 
 
 @router.get(
@@ -39,9 +50,41 @@ async def get_watchlist(
     )
 
 
-@router.get("/realtime", summary="获取自选股票实时行情列表")
-async def get_realtime_stock_data():
-    pass
+@router.get(
+    "/realtime",
+    # response_model=BaseResponse[list[RealtimeQuoteResponse]],
+    summary="获取自选股票实时行情列表",
+)
+async def get_realtime_stock_data(
+    force_refresh: bool = Query(False, description="是否强制刷新", alias="forceRefresh")
+):
+    """
+    获取所有自选股票的实时行情数据
+
+    返回字段：
+    - name: 股票名称
+    - price: 当前价格
+    - change: 涨跌额
+    - change_pct: 涨跌幅(%)
+    - open: 开盘价
+    - high: 最高价
+    - low: 最低价
+    - pre_close: 昨收价
+    - volume: 成交量(股)
+    - amount: 成交额(元)
+    """
+    # 1. 获取所有自选股票
+    _, items = await watchlist_stock_service.get_list(page=1, page_size=100)
+
+    if not items:
+        return BaseResponse.success(data=[])
+
+    # 2. 预加载关联的 stock 信息，收集股票代码
+    holding_stocks = [(item.get("stockCode"), item.get("holdingNum")) for item in items]
+
+    stock_quotes = get_price_quotes(holding_stocks, force_refresh)
+
+    return BaseResponse.success(data=stock_quotes)
 
 
 @router.get(
@@ -195,12 +238,12 @@ def _aggregate_kline(
             {
                 "tradeDate": items[-1].trade_date,  # 取最后一个交易日
                 "open": items[0].open,
+                "close": items[-1].close,
                 "high": max(i.high for i in items),
                 "low": min(i.low for i in items),
-                "close": items[-1].close,
                 "volume": sum(i.volume for i in items),
                 "turnover": sum(i.turnover or Decimal(0) for i in items),
             }
         )
 
-    return result
+    return result[::-1]

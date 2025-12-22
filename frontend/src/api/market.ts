@@ -28,8 +28,8 @@ export const marketApi = {
   /**
    * 添加自选股票
    */
-  create: (data: WatchlistStockCreate) =>
-    http.post<WatchlistStock>(PREFIX, data),
+  create: (data: WatchlistStockCreate) => http.post<WatchlistStock>(PREFIX, data)
+  ,
 
   /**
    * 更新自选股票
@@ -51,11 +51,16 @@ export const marketApi = {
   /**
    * 获取实时行情列表
    */
-  getRealtime: () => http.get<RealtimeQuote[]>(`${PREFIX}/realtime`),
+  getRealtime: (forceRefresh?: Boolean) => http.get<RealtimeQuote[]>(`${PREFIX}/realtime`, { params: { forceRefresh: forceRefresh } }),
 
   /**
    * 获取单只股票历史行情
    */
   getHistory: (id: number, params?: HistoryQuotesParams) =>
-    http.get<KlineData[]>(`${PREFIX}/${id}/history`, params)
+    http.get<KlineData[]>(`${PREFIX}/${id}/history`, params),
+
+  /**
+   * 获取股票列表
+   */
+  getOptions: () => http.get(`${PREFIX}/options`)
 }

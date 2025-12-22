@@ -19,6 +19,7 @@ async def sync_stock_daily_line(symbol: str, start_date: datetime, end_date: dat
         count: 同步的天数，默认为1，表示同步最近的1个交易日数据
     """
     # 统计start_date到end_date的工作日数量
+    logger.info("日线同步")
     if start_date > end_date:
         start_date, end_date = end_date, start_date
 
@@ -169,6 +170,7 @@ class SyncService:
         """触发任务"""
 
         # 日期解析
+        logger.info("触发数据同步任务")
         today = datetime.today()
         yesterday = today - timedelta(days=1)
 
@@ -183,6 +185,7 @@ class SyncService:
             end_date = datetime.strptime(data_range[1], "%Y-%m-%d")
 
         if await SyncLog.filter(status=SyncStatus.RUNNING).exists():
+            logger.warning("已有同步任务在运行中，跳过本次触发")
             raise Exception("A synchronization task is already in progress.")
 
         # 创建日志条目
@@ -198,33 +201,32 @@ class SyncService:
         )
 
         try:
-            stocks = [
-                "000630.SZ",
-                "000875.SZ",
-                "002027.SZ",
-                "002270.SZ",
-                "002303.SZ",
-                "002749.SZ",
-                "002940.SZ",
-                "300899.SZ",
-                "301377.SZ",
-                "301551.SZ",
-                "600057.SH",
-                "600908.SH",
-            ]
-            for stock in stocks:
-                await sync_stock_daily_line(
-                    stock, start_date=start_date, end_date=end_date
+            stock_objs = await Stock.all()
+            logger.info(f"获取到 {len(stock_objs)} 只股票")
+
+            if not stock_objs:
+                logger.warning("股票列表为空，没有数据需要同步")
+
+            for i, stock in enumerate(stock_objs):
+                logger.info(
+                    f"开始同步第 {i+1}/{len(stock_objs)} 只: {stock.full_stock_code}"
                 )
+                await sync_stock_daily_line(
+                    stock.full_stock_code, start_date=start_date, end_date=end_date
+                )
+                logger.info(f"完成同步: {stock.full_stock_code}")
 
             log.status = SyncStatus.SUCCESS
             logger.info(f"同步任务完成: {range_desc}")
             return True
 
         except Exception as e:
+            import traceback
+
             log.status = SyncStatus.FAIL
             log.error_msg = str(e)
             logger.error(f"同步任务失败: {e}")
+            logger.error(traceback.format_exc())  # 打印完整堆栈
             return False
 
         finally:
@@ -241,3 +243,6 @@ class SyncService:
         log.status = status
         log.error_msg = error
         await log.save()
+
+
+sync_service = SyncService()

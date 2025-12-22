@@ -27,8 +27,8 @@ class WatchlistStockService(
             item_dict = await item.to_dict()
             # 从关联的 stock 获取字段
             if item.stock:
-                item_dict["stock_code"] = item.stock.full_stock_code
-                item_dict["short_name"] = item.stock.short_name
+                item_dict["stockCode"] = item.stock.full_stock_code
+                item_dict["shortName"] = item.stock.short_name
             data.append(item_dict)
 
         return total, data

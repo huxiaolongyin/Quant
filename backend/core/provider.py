@@ -1,10 +1,13 @@
 import datetime
+from functools import lru_cache
 
 import pandas as pd
 import requests
 
 from backend.core.logger import logger
 from backend.utils import format_code
+from cachetools import cached, TTLCache
+
 
 # 全局 Session，复用 TCP 连接，统一 Header
 SESSION = requests.Session()
@@ -13,6 +16,9 @@ SESSION.headers.update(
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 )
+
+# 创建全局缓存对象
+_today_minutes_cache = TTLCache(maxsize=256, ttl=60)
 
 
 def _process_dataframe(data, columns):
@@ -163,6 +169,111 @@ def get_price(code, end_date="", count=10, frequency="1d", fields=[]):
         except Exception as e_backup:
             logger.error(f"All sources failed for code: {code}. Error: {e_backup}")
             return pd.DataFrame()  # 返回空DF避免程序Crash
+
+
+@cached(cache=_today_minutes_cache)
+def _get_today_minutes(code: str) -> dict:
+    """
+    获取单个股票最新交易日分钟数据（带60秒缓存）
+
+    Args:
+        code: 股票代码
+
+    Returns:
+        pre_close: 昨收价
+        bars: 最新一天的分钟交易信息
+    """
+    formatted_code = format_code(code)
+    df = get_price(formatted_code, count=250, frequency="1m")
+
+    if df is None or df.empty:
+        return {"pre_close": None, "bars": []}
+
+    # 获取数据中最新的交易日
+    latest_date = df.index[-1].date()
+
+    # 筛选最新交易日的数据
+    df_latest = df[df.index.date == latest_date]
+
+    # 获取昨收价（最新交易日之前的最后一根K线收盘价）
+    df_previous = df[df.index.date < latest_date]
+
+    pre_close = df_previous["close"].iloc[-1] if not df_previous.empty else None
+
+    # 构建分钟K线数据
+    bars = (
+        df_latest.rename_axis("datetime")
+        .reset_index()
+        .assign(time=lambda x: x["datetime"].dt.strftime("%H:%M"))[
+            ["time", "open", "close", "high", "low", "volume"]
+        ]
+        .to_dict("records")
+    )
+
+    return pre_close, bars
+
+
+def get_price_quotes(
+    holding_stocks: list[(str, str)], force_refresh: bool = False
+) -> list[dict[str, any]]:
+    """
+    获取多个股票今日分钟级别数据
+
+    Args:
+        holding_stocks: 股票代码列表，如 [('600519.SH', 100), ('000001.SZ', 200)]
+        force_refresh: 是否强制刷新缓存
+
+    Returns:
+        {
+            "600519.SH": [{"time": "09:30", "open":100, "close": 1800.5}, ...],
+            "000001.SZ": [{"time": "09:30", "open":100, "close": 10.67}, ...]
+        }
+    """
+    # 强制刷新时清空缓存
+
+    if force_refresh:
+        _today_minutes_cache.clear()
+
+    res = []
+    for holding_stock in holding_stocks:
+        stock_name, holding_num = holding_stock
+        pre_close, bars = _get_today_minutes(stock_name)
+
+        # 最新价
+        latest = bars[-1]
+        latest_price = latest["close"]
+
+        # 计算涨跌
+        change = round(latest_price - pre_close, 4)
+        change_percent = round((change / pre_close) * 100, 2) if pre_close else 0
+
+        # 汇总统计
+        total_volume = sum(bar["volume"] for bar in bars)
+        high = max(bar["close"] for bar in bars)
+        low = min(bar["close"] for bar in bars)
+
+        # 持仓市值
+        price = holding_num * latest_price
+
+        # 昨日持仓市值
+        yesterday_price = holding_num * pre_close
+        res.append(
+            {
+                "stockCode": stock_name,
+                "latestPrice": latest_price,
+                "preClose": pre_close,
+                "change": change,
+                "changePercent": change_percent,
+                "open": bars[0]["open"],
+                "high": high,
+                "low": low,
+                "volume": total_volume,
+                "price": price,
+                "yesterdayPrice": yesterday_price,
+                "bars": bars,  # 分时明细
+            }
+        )
+    return res
 
 
 if __name__ == "__main__":

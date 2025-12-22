@@ -31,17 +31,8 @@
         </a-button>
 
         <!-- 立即同步按钮 -->
-        <a-tooltip
-          content="16:00前同步上一个股票日数据，16:00之后同步今天和上一个股票日数据"
-          position="left"
-        >
-          <a-button
-            type="primary"
-            status="success"
-            class="rounded-lg"
-            :loading="isSyncing"
-            @click="handleDailySync"
-          >
+        <a-tooltip content="16:00前同步上一个股票日数据，16:00之后同步今天和上一个股票日数据" position="left">
+          <a-button type="primary" status="success" class="rounded-lg" :loading="isSyncing" @click="handleDailySync">
             <template #icon><icon-sync /></template>
             {{ isSyncing ? "同步中..." : "立即同步" }}
           </a-button>
@@ -60,12 +51,7 @@
       </a-card>
 
       <a-card :loading="isLoading" hoverable class="rounded-lg border-gray-100">
-        <a-statistic
-          title="上次同步时间"
-          :value="formattedlastSyncTime"
-          val
-          format="YYYY-MM-DD HH:mm:ss"
-        >
+        <a-statistic title="上次同步时间" :value="formattedlastSyncTime" val format="YYYY-MM-DD HH:mm:ss">
           <template #prefix><icon-schedule /></template>
         </a-statistic>
         <div class="mt-2 flex items-center text-xs">
@@ -83,10 +69,7 @@
     </div>
 
     <!-- 任务进度条 (前端模拟轮询效果) -->
-    <transition
-      enter-active-class="animate-fade-in-down"
-      leave-active-class="animate-fade-out-up"
-    >
+    <transition enter-active-class="animate-fade-in-down" leave-active-class="animate-fade-out-up">
       <a-card v-if="isSyncing" class="border-blue-100 bg-blue-50">
         <div class="flex justify-between items-center mb-2">
           <span class="font-medium text-blue-800 flex items-center">
@@ -95,48 +78,36 @@
           </span>
           <span class="text-blue-600 font-mono">{{ syncProgress }}%</span>
         </div>
-        <a-progress
-          :percent="syncProgress / 100"
-          :color="{ '0%': 'rgb(var(--primary-6))', '100%': 'rgb(var(--success-6))' }"
-          size="large"
-          animation
-        />
+        <a-progress :percent="syncProgress / 100"
+          :color="{ '0%': 'rgb(var(--primary-6))', '100%': 'rgb(var(--success-6))' }" size="large" animation />
         <div class="mt-2 text-xs text-gray-500 font-mono">Log: {{ currentLog }}</div>
       </a-card>
     </transition>
 
     <!-- 同步历史记录表格 -->
     <a-card title="同步历史记录" :bordered="false" class="shadow-sm rounded-lg">
-      <a-table
-        :data="historyLogs"
-        :loading="isTableLoading"
-        :pagination="{
-          total: pagination.total,
-          current: pagination.page,
-          pageSize: pagination.pageSize,
-          showTotal: true,
-        }"
-        @page-change="onPageChange"
-      >
+      <a-table :data="historyLogs" :loading="isTableLoading" :pagination="{
+        total: pagination.total,
+        current: pagination.page,
+        pageSize: pagination.pageSize,
+        showTotal: true,
+      }" @page-change="onPageChange">
         <template #columns>
           <a-table-column title="任务ID" data-index="id" :width="100" />
           <a-table-column title="同步类型" data-index="type">
             <template #cell="{ record }">
-              <a-tag
-                :color="
-                  record.type === 'auto'
-                    ? 'blue'
-                    : record.type === 'manual'
-                    ? 'green'
-                    : 'orange'
-                "
-              >
+              <a-tag :color="record.type === 'auto'
+                ? 'blue'
+                : record.type === 'manual'
+                  ? 'green'
+                  : 'orange'
+                ">
                 {{
                   record.type === "auto"
                     ? "自动调度"
                     : record.type === "manual"
-                    ? "手动同步"
-                    : "历史补数"
+                      ? "手动同步"
+                      : "历史补数"
                 }}
               </a-tag>
             </template>
@@ -146,12 +117,13 @@
           <a-table-column title="耗时" data-index="duration" />
           <a-table-column title="状态" data-index="status">
             <template #cell="{ record }">
-              <span
-                v-if="record.status === 'success'"
-                class="flex items-center text-green-600"
-              >
+              <span v-if="record.status === 'success'" class="flex items-center text-green-600">
                 <icon-check-circle-fill class="mr-1" />
                 成功
+              </span>
+              <span v-else-if="record.status === 'running'" class="flex items-center text-blue-600">
+                <icon-sync class="mr-1 animate-spin" />
+                运行中
               </span>
               <span v-else class="flex items-center text-red-600">
                 <icon-close-circle-fill class="mr-1" />
@@ -164,11 +136,7 @@
     </a-card>
 
     <!-- 补数模态框 -->
-    <a-modal
-      v-model:visible="backfillModalVisible"
-      title="历史数据补录"
-      @ok="handleConfirmBackfill"
-    >
+    <a-modal v-model:visible="backfillModalVisible" title="历史数据补录" @ok="handleConfirmBackfill">
       <div class="space-y-4">
         <a-alert>补录数据将在后台队列中执行，这可能需要几分钟时间。</a-alert>
         <div>
@@ -192,6 +160,7 @@ import {
   IconCheckCircleFill,
   IconCloseCircleFill,
   IconHistory,
+  IconLoading,
   IconSchedule,
   IconSettings,
   IconSync,

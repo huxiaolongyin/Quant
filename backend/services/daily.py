@@ -23,7 +23,6 @@ class DailyLineService(BaseService[DailyLine, dict, dict]):
     ) -> list[DailyLine]:
         """
         获取股票历史日线数据
-
         Args:
             stock_code: 股票代码
             start_date: 开始日期
@@ -31,13 +30,14 @@ class DailyLineService(BaseService[DailyLine, dict, dict]):
             limit: 返回数量限制
         """
         query = self.model.filter(stock_code=stock_code)
-
         if start_date:
             query = query.filter(trade_date__gte=start_date)
         if end_date:
             query = query.filter(trade_date__lte=end_date)
 
-        return await query.order_by("-trade_date").limit(limit).all()
+        # 先按日期降序取最近的 limit 条，再反转成正序（从旧到新）
+        result = await query.order_by("-trade_date").limit(limit).all()
+        return result[::-1]
 
 
 # 单例
