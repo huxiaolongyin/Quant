@@ -2,8 +2,6 @@ import datetime
 
 import backtrader as bt
 
-from backend.utils import send_email
-
 from .base import BaseStrategy
 
 
@@ -31,9 +29,7 @@ class RSIStrategy(BaseStrategy):
         self.order = None
 
     def next(self):
-        dt = self.datas[0].datetime.date(0)
-        close = self.datas[0].close[0]
-        trade_signal = dt == datetime.datetime.today().date()
+
         # 如果有未完成的订单，直接返回
         if self.order:
             return
@@ -59,15 +55,6 @@ class RSIStrategy(BaseStrategy):
                     self.log(
                         f"买入信号, RSI: {self.rsi[0]:.2f}, 价格: {price:.2f}, 数量: {self.size}"
                     )
-                    if trade_signal:
-                        subject = f"{dt}股票量化买入信号: {self.datas[0]._name}"
-                        content = f"""
-                        信号: BUY
-                        日期: {dt}
-                        收盘价格: {close:.2f}
-                        策略 {self.__class__.__name__}
-                        """
-                        send_email(subject, content)
                     self.order = self.buy(size=self.size)
                 else:
 
@@ -80,13 +67,4 @@ class RSIStrategy(BaseStrategy):
                 self.log(
                     f"卖出信号, RSI: {self.rsi[0]:.2f}， 卖出全部持仓: {self.size}股"
                 )
-                if trade_signal:
-                    subject = f"{dt}股票量化卖出信号: {self.datas[0]._name}"
-                    content = f"""
-                    信号: SELL
-                    日期: {dt}
-                    收盘价格: {close:.2f}
-                    策略 {self.__class__.__name__}
-                    """
-                    send_email(subject, content)
                 self.order = self.sell(size=self.size)

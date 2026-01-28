@@ -1,10 +1,6 @@
-from datetime import datetime
-from queue import Queue
-
 import backtrader as bt
 
 from backend.core.logger import logger
-from backend.utils import send_email
 
 
 class BaseStrategy(bt.Strategy):

@@ -17,7 +17,7 @@ async def stock_select():
     - 排除 ST 股票----风险大
     - 最近单股股价<=50----钱少，买不起
     - 排除房地产、建筑业行业----行业不景气
-    - 最近 15 天内，有涨停或跌停的情况----水深，把握不住
+    - 最近 30 天内，有3次涨停或跌停的情况----水深，把握不住
     """
 
     yesterday_str = get_previous_workday()
@@ -54,16 +54,13 @@ async def stock_select():
     limit_up_down_stocks = {row["stock_code"] for row in result}
 
     # 排除今天股价>50的
-    today_lines = await DailyLine.filter(
-        Q(trade_date=yesterday_str) & Q(close__lt=50)
-    ).all()
+    today_lines = await DailyLine.filter(Q(trade_date=yesterday_str) & Q(close__lt=50)).all()
 
     # 股票列表
     stock_list = {
         line.stock_code
         for line in today_lines
-        if line.stock_code not in limit_up_down_stocks
-        and line.stock_code.endswith(".SZ")
+        if line.stock_code not in limit_up_down_stocks and line.stock_code.endswith(".SZ")
     }
 
     q = (

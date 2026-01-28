@@ -4,9 +4,11 @@ from enum import Enum
 from typing import Any, Dict, List, Set
 from uuid import UUID
 
+from tortoise import fields
 from tortoise.models import Model
 
 
+# TODO: 改为utils 中的,现在有点嵌套循环了
 def to_lower_camel_case(x):
     """
     转小驼峰法命名, 首单词首字母小写, 其他单词首字母大写, userLoginCount
@@ -66,3 +68,10 @@ class BaseModel(Model):
             await self._process_m2m_fields(result, include_set, exclude_set)
 
         return result
+
+
+class TimestampMixin:
+    """时间戳混入类"""
+
+    created_at = fields.DatetimeField(auto_now_add=True, description="创建时间")
+    updated_at = fields.DatetimeField(auto_now=True, description="更新时间")

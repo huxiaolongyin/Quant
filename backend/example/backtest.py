@@ -6,7 +6,6 @@ from backend.core.logger import logger
 from backend.core.selector import stock_select
 from backend.trading.engine import run_backtest
 from backend.trading.strategies.rsi import RSIStrategy
-from backend.trading.strategies.volume_price import VolumePriceStrategy
 
 # 目标股票池
 symbols = asyncio.run(stock_select())
