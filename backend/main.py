@@ -1,17 +1,21 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from backend.api.router import router
 from fastapi import FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.staticfiles import StaticFiles
 
+from backend.api.router import router
+from backend.core.scheduler import scheduler
 from backend.db.db_init import modify_db
+from backend.tasks import sync_holidays
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await modify_db()
+    await sync_holidays()  #  启动时，同步节假日信息
+    scheduler.start()
     yield
 
 

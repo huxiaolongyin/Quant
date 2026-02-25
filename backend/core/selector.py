@@ -6,7 +6,7 @@ from tortoise.expressions import Q
 from backend.core.logger import logger
 from backend.db.session import with_db
 from backend.models import DailyLine, Stock
-from backend.utils import get_previous_workday
+from backend.utils import get_previous_trading_day
 
 
 @with_db
@@ -20,7 +20,7 @@ async def stock_select():
     - 最近 30 天内，有3次涨停或跌停的情况----水深，把握不住
     """
 
-    yesterday_str = get_previous_workday()
+    yesterday_str = get_previous_trading_day()
     start_date_str = (datetime.today() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     # 找出最近15天的涨停股

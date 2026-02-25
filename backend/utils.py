@@ -10,13 +10,11 @@ from tortoise.expressions import Q
 import backend.core.config as config
 from backend.core.logger import logger
 from backend.db.session import with_db
-from backend.models import DailyLine
+from backend.models import DailyLine, Holiday
 
 
 @with_db
-async def get_stock_data(
-    stock_code: str, fromdate: datetime, todate: datetime
-) -> pd.DataFrame:
+async def get_stock_data(stock_code: str, fromdate: datetime, todate: datetime) -> pd.DataFrame:
     """数据获取与预处理函数"""
 
     q = Q(stock_code=stock_code) & Q(trade_date__gt=fromdate)
@@ -79,27 +77,26 @@ def date_process(start_date: str, end_date: str = "") -> Tuple[str, str]:
     return fromdate, todate
 
 
-def get_previous_workday(date=None):
-    """获取上一个工作日"""
+async def get_previous_trading_day(date=None):
+    """获取中国股票上一个交易日"""
 
     if date is None:
         date = datetime.today()
 
-    offset = 1
-    weekday = date.weekday()
-    # weekday() 返回0-6，代表周一到周日
+    previous_day = date
 
-    if weekday == 0:  # 周一，上一个工作日是前周五，往前推3天
-        offset = 3
-    elif weekday == 6:  # 星期日，上一个工作日是周五，往前推2天
-        offset = 2
-    elif weekday == 5:  # 星期六，上一个工作日是周五，往前推1天
-        offset = 1
-    else:
-        offset = 1  # 正常情况往前推1天即可
+    while True:
+        previous_day -= timedelta(days=1)
+        weekday = previous_day.weekday()  # weekday() 返回0-6，代表周一到周日
 
-    previous_workday = date - timedelta(days=offset)
-    return previous_workday.strftime("%Y-%m-%d")
+        # 跳过周末
+        if weekday in (5, 6):
+            continue
+
+        # 检查是否为节假日
+        holiday = await Holiday.get_or_none(date=previous_day.date())
+        if holiday is None:
+            return previous_day.strftime("%Y-%m-%d")
 
 
 def send_email(subject: str, body: str, to_email: str = ""):

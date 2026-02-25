@@ -3,13 +3,7 @@ from typing import List, Optional, Tuple
 from tortoise.expressions import Q
 from tortoise.transactions import in_transaction
 
-from backend.models.strategy import (
-    Strategy,
-    StrategyBacktest,
-    StrategyPerformance,
-    StrategyTag,
-    StrategyTagRelation,
-)
+from backend.models.strategy import Strategy, StrategyBacktest, StrategyTag, StrategyTagRelation  # StrategyPerformance,
 from backend.schemas.strategy import (
     StrategyCreateSchema,
     StrategyListParams,
@@ -19,17 +13,13 @@ from backend.schemas.strategy import (
 from backend.services.base import BaseService
 
 
-class StrategyService(
-    BaseService[Strategy, StrategyCreateSchema, StrategyUpdateSchema]
-):
+class StrategyService(BaseService[Strategy, StrategyCreateSchema, StrategyUpdateSchema]):
     """策略服务"""
 
     def __init__(self):
         super().__init__(Strategy)
 
-    async def get_list_with_performance(
-        self, params: StrategyListParams
-    ) -> Tuple[int, List[dict]]:
+    async def get_list_with_performance(self, params: StrategyListParams) -> Tuple[int, List[dict]]:
         """获取策略列表（包含绩效数据和标签）"""
 
         # 构建查询条件
@@ -57,9 +47,7 @@ class StrategyService(
         # 排序
         order = []
         if params.sort_by:
-            order_field = (
-                f"-{params.sort_by}" if params.sort_order == "desc" else params.sort_by
-            )
+            order_field = f"-{params.sort_by}" if params.sort_order == "desc" else params.sort_by
             order.append(order_field)
         else:
             order.append("-updated_at")  # 默认按更新时间倒序
@@ -154,9 +142,7 @@ class StrategyService(
         """获取策略详情（包含所有关联数据）"""
         return (
             await Strategy.filter(id=id)
-            .prefetch_related(
-                "tag_relations__tag", "performance", "backtests", "executions"
-            )
+            .prefetch_related("tag_relations__tag", "performance", "backtests", "executions")
             .first()
         )
 

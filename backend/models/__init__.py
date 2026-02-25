@@ -1,14 +1,10 @@
 from .daily import DailyLine
+from .holiday import Holiday
 from .market import WatchlistStock
 from .selector import Selector, SelectorNode
 from .stock import Stock
-from .strategy import (
-    Strategy,
-    StrategyBacktest,  # StrategyPerformance,
-    StrategyTag,
-    StrategyTagRelation,
-    StrategyVersion,
-)
+from .strategy import StrategyBacktest  # StrategyPerformance,
+from .strategy import Strategy, StrategyTag, StrategyTagRelation, StrategyVersion
 from .sync import SyncConfig, SyncLog
 
 __all__ = [
@@ -24,5 +20,6 @@ __all__ = [
     "StrategyTagRelation",
     "StrategyBacktest",
     "StrategyVersion",
+    "Holiday",
     # "StrategyPerformance",
 ]

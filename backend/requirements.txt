@@ -16,3 +16,5 @@ loguru
 uvicorn
 cachetools
 aiocache
+apscheduler
+pytz
