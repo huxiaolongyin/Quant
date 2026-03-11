@@ -1,5 +1,6 @@
 import AppLayout from '@/components/Layout/AppLayout.vue'
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const Dashboard = () => import('@/views/Dashboard.vue')
 const Watchlist = () => import('@/views/Market/Watchlist.vue')
@@ -9,13 +10,22 @@ const SelectorEditor = () => import('@/views/Selector/Editor.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
 const StrategyEditor = () => import('@/views/Strategy/Editor.vue')
 const BacktestReport = () => import('@/views/Strategy/BacktestReport.vue')
-const NotificationSettings = () =>
-  import('@/views/Settings/NotificationSettings.vue')
+const NotificationSettings = () => import('@/views/Settings/NotificationSettings.vue')
+const Login = () => import('@/views/Auth/Login.vue')
+const UserList = () => import('@/views/System/UserList.vue')
+const RoleList = () => import('@/views/System/RoleList.vue')
 
 const routes = [
   {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: { title: '登录', requiresAuth: false }
+  },
+  {
     path: '/',
     component: AppLayout,
+    meta: { requiresAuth: true },
     children: [
       {
         path: '',
@@ -70,12 +80,58 @@ const routes = [
         name: 'NotificationSettings',
         component: NotificationSettings,
         meta: { title: '通知设置' }
+      },
+      {
+        path: 'system/users',
+        name: 'UserList',
+        component: UserList,
+        meta: { title: '用户管理', permission: 'user' }
+      },
+      {
+        path: 'system/roles',
+        name: 'RoleList',
+        component: RoleList,
+        meta: { title: '角色管理', permission: 'role' }
       }
     ]
   }
 ]
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+  const token = userStore.token || localStorage.getItem('token')
+
+  if (to.meta.requiresAuth !== false) {
+    if (!token) {
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+      return
+    }
+
+    if (!userStore.userInfo) {
+      const success = await userStore.fetchUserInfo()
+      if (!success) {
+        next({ name: 'Login' })
+        return
+      }
+    }
+
+    if (to.meta.permission && !userStore.hasPermission(to.meta.permission as string)) {
+      next({ name: 'Dashboard' })
+      return
+    }
+  }
+
+  if (to.name === 'Login' && token && userStore.userInfo) {
+    next({ name: 'Dashboard' })
+    return
+  }
+
+  next()
+})
+
+export default router

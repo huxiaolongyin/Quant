@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.api.router import router
 from backend.core.scheduler import scheduler
-from backend.db.db_init import modify_db
+from backend.db.db_init import init_default_data, modify_db
 from backend.services.sync import sync_service
 
 
@@ -16,6 +16,7 @@ from backend.services.sync import sync_service
 async def lifespan(app: FastAPI):
     try:
         await modify_db()
+        await init_default_data()
         await sync_service.sync_holidays()  #  启动时，同步节假日信息
         scheduler.start()
         yield

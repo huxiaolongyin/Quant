@@ -39,19 +39,33 @@
 </template>
 
 <script setup lang="ts">
-import { Code, Database, Filter, History, LayoutDashboard, TrendingUp } from "lucide-vue-next";
-import { useRoute } from "vue-router"; // 1. 引入 useRoute
+import { Code, Database, Filter, History, LayoutDashboard, Settings, TrendingUp, Users } from "lucide-vue-next";
+import { useRoute } from "vue-router";
+import { computed } from "vue";
+import { useUserStore } from "@/stores/user";
 
-const route = useRoute(); // 2. 获取当前路由对象
+const route = useRoute();
+const userStore = useUserStore();
 
-const menuItems = [
-  { name: "仪表盘", path: "/", icon: LayoutDashboard },
-  { name: "自选行情", path: "/market/watchlist", icon: TrendingUp },
-  { name: "数据同步", path: "/data/sync", icon: Database },
-  { name: "选股器", path: "/selector/list", icon: Filter },
-  { name: "策略工场", path: "/strategy/list", icon: Code },
-  { name: "回测分析", path: "/strategy/backtest", icon: History },
-];
+const menuItems = computed(() => {
+  const items = [
+    { name: "仪表盘", path: "/", icon: LayoutDashboard },
+    { name: "自选行情", path: "/market/watchlist", icon: TrendingUp },
+    { name: "数据同步", path: "/data/sync", icon: Database },
+    { name: "选股器", path: "/selector/list", icon: Filter },
+    { name: "策略工场", path: "/strategy/list", icon: Code },
+    { name: "回测分析", path: "/strategy/backtest", icon: History },
+  ];
+
+  if (userStore.hasPermission('user')) {
+    items.push({ name: "用户管理", path: "/system/users", icon: Users });
+  }
+  if (userStore.hasPermission('role')) {
+    items.push({ name: "角色管理", path: "/system/roles", icon: Settings });
+  }
+
+  return items;
+});
 
 // 3. 自定义高亮判断函数
 const isActive = (path: string) => {

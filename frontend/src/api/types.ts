@@ -17,6 +17,21 @@ export interface PageResult<T> {
   total: number
 }
 
+// 分页响应（完整版，与后端返回结构匹配）
+export interface PaginatedResponse<T = any> {
+  code: number
+  data: {
+    list: T[]
+    total: number
+    page: number
+    pageSize: number
+    pages: number
+    hasNext: boolean
+    hasPrev: boolean
+  }
+  message: string
+}
+
 // 请求配置扩展
 export interface RequestConfig {
   /** 是否显示 loading */

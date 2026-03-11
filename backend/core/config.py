@@ -27,6 +27,12 @@ class Settings:
     FEISHU_WEBHOOK = os.environ.get("FEISHU_WEBHOOK")
     FEISHU_SECRET = os.environ.get("FEISHU_SECRET")
 
+    # JWT 配置
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "quant-platform-secret-key-2024")
+    JWT_ALGORITHM = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7))
+
     # TORTOISE 配置
     TORTOISE_ORM = {
         "connections": {

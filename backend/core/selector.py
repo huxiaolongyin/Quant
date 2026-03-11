@@ -75,8 +75,8 @@ async def stock_select():
     }
 
     q = (
-        Q(city="深圳市")
-        & Q(full_stock_code__in=stock_list)
+        # Q(city="深圳市")
+        Q(full_stock_code__in=stock_list)
         & Q(sector="主板")
         & ~Q(short_name__icontains="ST")
         & ~Q(industry__in=["K 房地产", "E 建筑业"])
