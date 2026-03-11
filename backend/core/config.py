@@ -2,7 +2,6 @@ import os
 
 from dotenv import load_dotenv
 
-# 加载环境变量
 load_dotenv(override=True)
 
 
@@ -20,6 +19,13 @@ class Settings:
     # 股票配置
     INIT_CACHE = float(os.environ.get("COMMISSION") or 10000.00)
     COMMISSION = os.environ.get("COMMISSION") or 0.0005
+
+    # 通知机器人配置（可选，数据库配置优先）
+    DINGTALK_WEBHOOK = os.environ.get("DINGTALK_WEBHOOK")
+    DINGTALK_SECRET = os.environ.get("DINGTALK_SECRET")
+    WECHAT_WEBHOOK = os.environ.get("WECHAT_WEBHOOK")
+    FEISHU_WEBHOOK = os.environ.get("FEISHU_WEBHOOK")
+    FEISHU_SECRET = os.environ.get("FEISHU_SECRET")
 
     # TORTOISE 配置
     TORTOISE_ORM = {

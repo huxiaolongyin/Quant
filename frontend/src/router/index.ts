@@ -1,13 +1,13 @@
 import AppLayout from '@/components/Layout/AppLayout.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
-// 使用懒加载
 const Dashboard = () => import('@/views/Dashboard.vue')
 const Watchlist = () => import('@/views/Market/Watchlist.vue')
 const DataSync = () => import('@/views/Data/SyncManager.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
 const StrategyEditor = () => import('@/views/Strategy/Editor.vue')
 const BacktestReport = () => import('@/views/Strategy/BacktestReport.vue')
+const NotificationSettings = () => import('@/views/Settings/NotificationSettings.vue')
 
 const routes = [
   {
@@ -49,6 +49,12 @@ const routes = [
         name: 'BacktestReport',
         component: BacktestReport,
         meta: { title: '回测绩效分析' }
+      },
+      {
+        path: 'settings/notification',
+        name: 'NotificationSettings',
+        component: NotificationSettings,
+        meta: { title: '通知设置' }
       }
     ]
   }

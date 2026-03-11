@@ -1,6 +1,7 @@
 from .daily import DailyLine
 from .holiday import Holiday
 from .market import WatchlistStock
+from .notification import NotificationChannel
 from .selector import Selector, SelectorNode
 from .stock import Stock
 from .strategy import StrategyBacktest  # StrategyPerformance,
@@ -21,5 +22,6 @@ __all__ = [
     "StrategyBacktest",
     "StrategyVersion",
     "Holiday",
+    "NotificationChannel",
     # "StrategyPerformance",
 ]

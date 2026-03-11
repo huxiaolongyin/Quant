@@ -15,6 +15,7 @@ fastapi
 loguru
 uvicorn
 cachetools
+httpx
 aiocache
 apscheduler
 pytz
