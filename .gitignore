@@ -7,3 +7,4 @@ migrations
 logs
 node_modules
 tmp
+**timestamp**

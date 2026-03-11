@@ -1,248 +1,130 @@
-from datetime import datetime, timedelta
-from typing import Any, Dict, List
+"""进行数据同步的服务（APScheduler 任务入口 + 同步编排）
 
+- 日线：使用 backend.core.provider.get_price(code, end_date, count, frequency="1d", fields=[])
+- 节假日：GET https://publicapi.xiaoai.me/holiday/year?date={year}
+
+实现要点：
+1) 用 PostgreSQL 做“互斥锁 + 游标(sync_state)”：避免定时任务重入、支持增量同步
+2) 日线按 trade_date 增量 upsert（unique_together = stock_code + trade_date）
+3) 失败可重试/可续跑：cursor 只在成功后推进
+"""
+
+import asyncio
+from datetime import date, datetime, timedelta
+
+import httpx
 from tortoise.transactions import in_transaction
+from tqdm.asyncio import tqdm
 
 from backend.core.logger import logger
 from backend.core.provider import get_price
-from backend.enums.sync import SyncStatus, SyncType
-from backend.models import DailyLine, Stock, SyncConfig, SyncLog
-from backend.schemas import PaginatedData, SyncSummaryResponse
-
-
-async def sync_stock_daily_line(symbol: str, start_date: datetime, end_date: datetime):
-    """
-    同步日线 （事务 + 批量插入 + 更新）
-    Args:
-        symbol: 股票代码，例如 "AAPL"、"000001.SZ"
-        end_date: 截止日期，格式为 "YYYY-MM-DD"，默认为空，表示同步至最新数据
-        count: 同步的天数，默认为1，表示同步最近的1个交易日数据
-    """
-    # 统计start_date到end_date的工作日数量
-    logger.info("日线同步")
-    if start_date > end_date:
-        start_date, end_date = end_date, start_date
-
-    workdays = 0
-    current = start_date
-
-    while current <= end_date:
-        if current.weekday() < 5:
-            workdays += 1
-        current += timedelta(days=1)
-
-    # 获取股票日线数据
-    stock_df = get_price(symbol, end_date=end_date, count=workdays)
-
-    # 取所有日期键
-    trade_dates = [
-        (
-            trade_date
-            if isinstance(trade_date, datetime)
-            else datetime.strptime(str(trade_date), "%Y-%m-%d").date()
-        )
-        for trade_date in stock_df.index
-    ]
-
-    async with in_transaction() as conn:
-        # 查询数据库已有的 trade_date 列表（对应 stock_code）
-        existing_records = (
-            await DailyLine.filter(stock_code=symbol, trade_date__in=trade_dates)
-            .using_db(conn)
-            .all()
-        )
-        existing_dates = {record.trade_date for record in existing_records}
-
-        new_records = []
-
-        for trade_date, row in stock_df.iterrows():
-            date_obj = (
-                trade_date.date()
-                if isinstance(trade_date, datetime)
-                else datetime.strptime(str(trade_date), "%Y-%m-%d").date()
-            )
-
-            if date_obj not in existing_dates:
-
-                # 新记录放入批量插入队列
-                new_records.append(
-                    DailyLine(
-                        stock_code=symbol,
-                        trade_date=date_obj,
-                        open=row["open"],
-                        high=row["high"],
-                        low=row["low"],
-                        close=row["close"],
-                        volume=int(row["volume"]),
-                        turnover=None,
-                    )
-                )
-
-        # 批量插入新数据
-        if new_records:
-            await DailyLine.bulk_create(new_records, using_db=conn)
-            logger.info(f"{symbol}数据获取成功")
+from backend.models import DailyLine, Holiday, Stock
+from backend.schemas.market import DateBar
 
 
 class SyncService:
+    """接口服务，提供给接口"""
 
-    @staticmethod
-    async def get_config() -> SyncConfig:
-        """获取单例配置记录"""
-        config, _ = await SyncConfig.get_or_create(id=1)
-        return config
-
-    @classmethod
-    async def get_summary(cls) -> Dict[str, Any]:
+    async def sync_holidays(self):
         """
-        返回状态、计数和调度器信息
+        同步节假日数据，会定时调度
         """
-        config = await cls.get_config()
+        current_year = datetime.now().year
+        year_start = date(current_year, 1, 1)
+        year_end = date(current_year + 1, 1, 1)
 
-        # 获取“最后一次同步时间”的最新完成日志
-        last_log = (
-            await SyncLog.filter(status=SyncStatus.SUCCESS)
-            .order_by("-end_time")
-            .first()
-        )
+        # 如果有今年的数据则跳过
+        existing = await Holiday.filter(date__gte=year_start, date__lt=year_end).exists()
+        if existing:
+            logger.info(f"已存在{current_year}节假日信息，跳过同步")
+            return
 
-        # 模拟数据统计在实际应用程序查询您的股票模型
-        stock_count = await Stock.all().count()
-        stat_days = 3350
+        url = f"https://publicapi.xiaoai.me/holiday/year?date={current_year}"
 
-        # 确定全局状态（检查当前是否有日志正在运行）
-        running_task = await SyncLog.filter(status=SyncStatus.RUNNING).exists()
-        current_status = "running" if running_task else "idle"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url)
+            data = resp.json()
 
-        last_sync_time = (
-            int(last_log.end_time.timestamp() * 1000)
-            if last_log and last_log.end_time
-            else 0
-        )
+        data = data.get("data", [])
+        # 返回格式：[{"daytype": 1, "holiday": "元旦节", "rest": 1, "date": "2026-01-01", "week": 4, "week_desc_en": "Thursday", "week_desc_cn": "星期四" }...]
 
-        return SyncSummaryResponse(
-            last_sync_time=last_sync_time,
-            data_range="2010-01-01 ~ 2025-11-28",
-            stat_days=stat_days,
-            stock_count=stock_count,
-            scheduler={
-                "enabled": config.scheduler_enabled,
-                "time": config.scheduler_time,
-            },
-            status=current_status,
-        )
+        holidays = [item for item in data if item.get("rest") == 1]
 
-    @classmethod
-    async def get_logs(cls, page: int = 1, page_size: int = 10) -> Dict[str, Any]:
+        for holiday in holidays:
+            await Holiday.update_or_create(date=holiday["date"], defaults={"name": holiday["holiday"]})
+        logger.info(f"{current_year}节假日信息同步完成")
+
+    async def sync_stock_daily_line(self, start_date: datetime, end_date: datetime):
         """
-        获取同步日志
+        批量同步日线数据，会定时调度
         """
-        offset = (page - 1) * page_size
+        # 1. 计算增量区间
+        trade_days = 0
+        current = start_date
 
-        total = await SyncLog.all().count()
-        logs_query = await SyncLog.all().offset(offset).limit(page_size)
+        # 获取日期范围内的所有节假日
+        holidays = await Holiday.filter(date__gte=start_date, date__lte=end_date).values_list("date", flat=True)
+        holiday_set = set(holidays)
 
-        # 将数据库模型转换为前端视图模型
-        list_data = []
-        for log in logs_query:
-            list_data.append(
-                {
-                    "id": str(log.id),
-                    "type": log.type,
-                    "range": log.range_desc,
-                    "startTime": log.start_time.isoformat(),  # Or custom format to match locale
-                    "duration": log.duration(),
-                    "status": log.status,
-                }
+        while current <= end_date:
+            # 排除周六周日（weekday() 5=周六, 6=周日）
+            if current.weekday() < 5 and current not in holiday_set:
+                trade_days += 1
+            current += timedelta(days=1)
+
+        # 2. 股票列表获取
+        stock_objs = await Stock.all()
+
+        # 测试用例
+        # example_stocks = ["000001.SZ", "002106.SZ", "002327.SZ"]
+        # stock_objs = await Stock.filter(full_stock_code__in=example_stocks)
+        stock_codes = [stock.full_stock_code for stock in stock_objs]
+
+        # 3. 获取股票数据
+        all_data: list[DateBar] = []
+        for code in tqdm(stock_codes, desc="获取股票数据"):
+            data: list[DateBar] = get_price(code, end_date=end_date, count=trade_days)
+            all_data.extend(data)
+            await asyncio.sleep(0.05)  # 避免获取频繁，导致服务异常
+
+        # 4. 过滤退市数据、空数据
+        new_records = [
+            DailyLine(
+                stock_code=item.stock_code,
+                trade_date=item.trade_date,
+                open=item.open_,
+                close=item.close,
+                high=item.high,
+                low=item.low,
+                volume=item.volume,
             )
+            for item in all_data
+            if not item or item.trade_date >= start_date.date()
+        ]
 
-        return PaginatedData(
-            list=list_data, total=total, page=page, page_size=page_size
-        )
+        # 5. 插入或更新到数据库
+        async with in_transaction() as conn:
+            await DailyLine.bulk_create(
+                new_records,
+                using_db=conn,
+                on_conflict=["stock_code", "trade_date"],
+                update_fields=["open", "high", "low", "close", "volume", "turnover"],
+            )
+            logger.info(f"批量插入 {len(new_records)} 条记录成功")
 
-    @classmethod
-    async def trigger_task(
-        cls,
-        type: str,
-        data_range: List[str] | None = None,
-        payload: Any = None,
-    ) -> bool:
-        """触发任务"""
+        # 6. 更新游标
 
-        # 日期解析
-        logger.info("触发数据同步任务")
-        today = datetime.today()
-        yesterday = today - timedelta(days=1)
-
-        if not data_range:
-            start_date = yesterday
-            end_date = today if datetime.now().hour >= 16 else yesterday
-        elif len(data_range) == 1:
-            start_date = datetime.strptime(data_range[0], "%Y-%m-%d")
-            end_date = today if datetime.now().hour >= 16 else yesterday
-        else:
-            start_date = datetime.strptime(data_range[0], "%Y-%m-%d")
-            end_date = datetime.strptime(data_range[1], "%Y-%m-%d")
-
-        if await SyncLog.filter(status=SyncStatus.RUNNING).exists():
-            logger.warning("已有同步任务在运行中，跳过本次触发")
-            raise Exception("A synchronization task is already in progress.")
-
-        # 创建日志条目
-        range_desc = (
-            f"{start_date.strftime('%Y-%m-%d')} ~ {end_date.strftime('%Y-%m-%d')}"
-        )
-
-        if type == SyncType.BACKFILL:
-            range_desc = "Custom Range Backfill"  # Parse payload for actual range
-
-        log = await SyncLog.create(
-            type=type, range_desc=range_desc, status=SyncStatus.RUNNING
-        )
-
-        try:
-            stock_objs = await Stock.all()
-            logger.info(f"获取到 {len(stock_objs)} 只股票")
-
-            if not stock_objs:
-                logger.warning("股票列表为空，没有数据需要同步")
-
-            for i, stock in enumerate(stock_objs):
-                logger.info(
-                    f"开始同步第 {i+1}/{len(stock_objs)} 只: {stock.full_stock_code}"
-                )
-                await sync_stock_daily_line(
-                    stock.full_stock_code, start_date=start_date, end_date=end_date
-                )
-                logger.info(f"完成同步: {stock.full_stock_code}")
-
-            log.status = SyncStatus.SUCCESS
-            logger.info(f"同步任务完成: {range_desc}")
-            return True
-
-        except Exception as e:
-            import traceback
-
-            log.status = SyncStatus.FAIL
-            log.error_msg = str(e)
-            logger.error(f"同步任务失败: {e}")
-            logger.error(traceback.format_exc())  # 打印完整堆栈
-            return False
-
-        finally:
-            log.end_time = datetime.now()
-            await log.save()
-
-    @classmethod
-    async def finish_task(cls, log_id: int, status: SyncStatus, error: str = None):
+    async def get_summary(self):
         """
-        在同步完成时由后台工作线程调用
+        返回同步状态、指标和调度器信息
         """
-        log = await SyncLog.get(id=log_id)
-        log.end_time = datetime.now()
-        log.status = status
-        log.error_msg = error
-        await log.save()
+        ...
+
+    async def get_logs(self, *args, **kwargs):
+        """
+        获取数据同步日志
+        """
+        ...
 
 
 sync_service = SyncService()

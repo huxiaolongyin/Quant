@@ -52,18 +52,29 @@ async def __get_price_latest(stock_code: str, date: str):
     return await DailyLine.filter(stock_code=stock_code, trade_date=date).first()
 
 
-def format_code(code: str):
+def format_code(code: str, reverse=False):
     """统一证券代码格式：sh000001 / sz000001"""
-    if code.endswith(".XSHG"):
-        return "sh" + code.replace(".XSHG", "")
-    elif code.endswith(".XSHE"):
-        return "sz" + code.replace(".XSHE", "")
-    elif code.endswith(".SH"):
-        return "sh" + code.replace(".SH", "")
-    elif code.endswith(".SZ"):
-        return "sz" + code.replace(".SZ", "")
+    if reverse:
+        code = code.lower()
+        num = code[2:]
+        if code.startswith("sh"):
+            return f"{num}.SH"
+        elif code.startswith("sz"):
+            return f"{num}.SZ"
+        else:
+            return code.upper()
+
     else:
-        return code.lower()
+        if code.endswith(".XSHG"):
+            return "sh" + code.replace(".XSHG", "")
+        elif code.endswith(".XSHE"):
+            return "sz" + code.replace(".XSHE", "")
+        elif code.endswith(".SH"):
+            return "sh" + code.replace(".SH", "")
+        elif code.endswith(".SZ"):
+            return "sz" + code.replace(".SZ", "")
+        else:
+            return code.lower()
 
 
 def date_process(start_date: str, end_date: str = "") -> Tuple[str, str]:

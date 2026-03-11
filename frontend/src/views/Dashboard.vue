@@ -36,6 +36,14 @@
           检查更新 &rarr;
         </button>
       </div>
+      <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <p class="text-gray-500 text-sm mb-1">入库股票数</p>
+        <h3 class="text-3xl font-bold text-gray-800">3</h3>
+        <div class="mt-4 flex items-center space-x-2">
+          <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+          <span class="text-sm text-green-600">双均线策略运行中</span>
+        </div>
+      </div>
     </div>
   </div>
 </template>

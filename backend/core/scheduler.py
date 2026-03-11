@@ -1,5 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from tasks import sync_holidays
+
+from backend.tasks import sync_holidays
 
 scheduler = AsyncIOScheduler(timezone="Asia/Shanghai")
 

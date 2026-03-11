@@ -20,15 +20,9 @@ class WatchlistStockBase(BaseSchema):
         examples=["15.500"],
     )
     sort_order: int | None = Field(default=0, description="排序序号", examples=[1])
-    notes: str | None = Field(
-        None, max_length=200, description="备注", examples=["长期持有"]
-    )
-    stock_code: str | None = Field(
-        None, max_length=200, description="股票代码", examples=["000001.SZ"]
-    )
-    short_name: str | None = Field(
-        None, max_length=200, description="股票名称", examples=["平安银行"]
-    )
+    notes: str | None = Field(None, max_length=200, description="备注", examples=["长期持有"])
+    stock_code: str | None = Field(None, max_length=200, description="股票代码", examples=["000001.SZ"])
+    short_name: str | None = Field(None, max_length=200, description="股票名称", examples=["平安银行"])
 
 
 class WatchlistStockCreate(WatchlistStockBase):
@@ -41,9 +35,7 @@ class WatchlistStockUpdate(BaseSchema):
     """更新自选股票（所有字段可选）"""
 
     holding_num: int | None = Field(None, ge=0, description="持有股数")
-    cost_price: Decimal | None = Field(
-        None, ge=0, max_digits=10, decimal_places=3, description="成本价"
-    )
+    cost_price: Decimal | None = Field(None, ge=0, max_digits=10, decimal_places=3, description="成本价")
     sort_order: int | None = Field(None, description="排序序号")
     notes: str | None = Field(None, max_length=200, description="备注")
 
@@ -67,7 +59,7 @@ class WatchlistStockResponse(WatchlistStockBase, IDMixin, TimestampMixin):
 class StockBase(BaseSchema):
     """股票交易基础"""
 
-    open: float
+    open_: float = Field(alias="open")
     close: float
     high: float
     low: float

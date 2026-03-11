@@ -1,4 +1,4 @@
-from tortoise import fields, models
+from tortoise import fields
 
 from .base import BaseModel
 
@@ -14,14 +14,13 @@ class DailyLine(BaseModel):
     low = fields.DecimalField(max_digits=10, decimal_places=4, description="最低价")
     close = fields.DecimalField(max_digits=10, decimal_places=4, description="收盘价")
     volume = fields.BigIntField(description="成交量")
-    turnover = fields.DecimalField(
-        max_digits=20, decimal_places=2, null=True, description="成交额（可选）"
-    )
+    turnover = fields.DecimalField(max_digits=20, decimal_places=2, null=True, description="成交额（可选）")
 
     class Meta:
         table = "stock_daily_line"
         unique_together = ("stock_code", "trade_date")
         ordering = ["-trade_date"]
+        indexes = (("trade_date",), ("stock_code", "trade_date"))
 
     def __str__(self):
         return f"股票={self.stock_code}, 日期={self.trade_date}, 开盘价={self.open}, 最高价={self.high}, 最低价={self.low}, 收盘价={self.close}"

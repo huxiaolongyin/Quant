@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -8,15 +9,22 @@ from fastapi.staticfiles import StaticFiles
 from backend.api.router import router
 from backend.core.scheduler import scheduler
 from backend.db.db_init import modify_db
-from backend.tasks import sync_holidays
+from backend.services.sync import sync_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await modify_db()
-    await sync_holidays()  #  启动时，同步节假日信息
-    scheduler.start()
-    yield
+    try:
+        await modify_db()
+        await sync_service.sync_holidays()  #  启动时，同步节假日信息
+        scheduler.start()
+        yield
+    except asyncio.CancelledError:
+        # 优雅地吞掉 Windows 下关闭时产生的取消异常
+        pass
+    finally:
+        # 这里放你的清理/关闭代码（如果有的话）
+        pass
 
 
 app = FastAPI(title="Quant API", docs_url=None, redoc_url=None, lifespan=lifespan)

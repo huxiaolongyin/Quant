@@ -4,13 +4,12 @@ from backend.enums.sync import SyncStatus, SyncType
 
 
 class SyncLog(models.Model):
-    """记录同步任务的执行历史"""
+    """记录每个同步任务的游标与状态"""
 
     id = fields.IntField(pk=True)
     type = fields.CharEnumField(SyncType, max_length=20, default=SyncType.MANUAL)
-    range_desc = fields.CharField(
-        max_length=100, description="Description of the date range synced"
-    )
+    cursor_date = fields.DateField(null=True)
+    range_desc = fields.CharField(max_length=100, description="Description of the date range synced")
     start_time = fields.DatetimeField(auto_now_add=True)
     end_time = fields.DatetimeField(null=True)
     status = fields.CharEnumField(SyncStatus, max_length=20, default=SyncStatus.RUNNING)
@@ -36,9 +35,7 @@ class SyncConfig(models.Model):
     scheduler_time = fields.CharField(max_length=10, default="17:30")
 
     # We might store the global 'running' state here or derive it from active logs
-    current_status = fields.CharEnumField(
-        SyncStatus, max_length=20, default=SyncStatus.IDLE
-    )
+    current_status = fields.CharEnumField(SyncStatus, max_length=20, default=SyncStatus.IDLE)
 
     class Meta:
         table = "sync_config"

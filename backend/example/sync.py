@@ -46,24 +46,16 @@ async def sync_stock(csv_path: str):
                 listing_date = pd.to_datetime(listing_date).date()
 
             # 利用a_share_code唯一定位，存在则更新，不存在则创建
-            stock_obj = (
-                await Stock.filter(stock_code=row["A股代码"])
-                .using_db(connection)
-                .first()
-            )
+            stock_obj = await Stock.filter(stock_code=row["A股代码"]).using_db(connection).first()
             if stock_obj:
                 stock_obj.exchange_name = row["交易所名称"]
                 stock_obj.exchange_code = row["交易所缩写"]
                 stock_obj.sector = row["板块"]
                 stock_obj.short_name = row["A股简称"]
-                stock_obj.english_name = (
-                    row["英文名称"] if not pd.isna(row["英文名称"]) else None
-                )
+                stock_obj.english_name = row["英文名称"] if not pd.isna(row["英文名称"]) else None
                 stock_obj.company_full_name = row["公司全称"]
                 stock_obj.listing_date = listing_date
-                stock_obj.industry = (
-                    row["所属行业"] if not pd.isna(row["所属行业"]) else None
-                )
+                stock_obj.industry = row["所属行业"] if not pd.isna(row["所属行业"]) else None
                 stock_obj.province = row["省份"] if not pd.isna(row["省份"]) else None
                 stock_obj.city = row["城市"] if not pd.isna(row["城市"]) else None
 
@@ -76,14 +68,10 @@ async def sync_stock(csv_path: str):
                     stock_code=row["A股代码"],
                     full_stock_code=row["A股代码全称"],
                     short_name=row["A股简称"],
-                    english_name=(
-                        row["英文名称"] if not pd.isna(row["英文名称"]) else None
-                    ),
+                    english_name=(row["英文名称"] if not pd.isna(row["英文名称"]) else None),
                     company_full_name=row["公司全称"],
                     listing_date=listing_date,
-                    industry=(
-                        row["所属行业"] if not pd.isna(row["所属行业"]) else None
-                    ),
+                    industry=(row["所属行业"] if not pd.isna(row["所属行业"]) else None),
                     province=row["省份"] if not pd.isna(row["省份"]) else None,
                     city=row["城市"] if not pd.isna(row["城市"]) else None,
                     using_db=connection,
@@ -103,21 +91,13 @@ async def sync_stock_daily_line(symbol: str, end_date: str = "", count: int = 1)
 
     # 取所有日期键
     trade_dates = [
-        (
-            trade_date
-            if isinstance(trade_date, datetime)
-            else datetime.strptime(str(trade_date), "%Y-%m-%d").date()
-        )
+        (trade_date if isinstance(trade_date, datetime) else datetime.strptime(str(trade_date), "%Y-%m-%d").date())
         for trade_date in stock_df.index
     ]
 
     async with in_transaction() as conn:
         # 查询数据库已有的 trade_date 列表（对应 stock_code）
-        existing_records = (
-            await DailyLine.filter(stock_code=symbol, trade_date__in=trade_dates)
-            .using_db(conn)
-            .all()
-        )
+        existing_records = await DailyLine.filter(stock_code=symbol, trade_date__in=trade_dates).using_db(conn).all()
         existing_dates = {record.trade_date for record in existing_records}
 
         new_records = []
@@ -153,24 +133,10 @@ async def sync_stock_daily_line(symbol: str, end_date: str = "", count: int = 1)
 
 @with_db
 async def main():
-    # stocks = [
-    #     "000630.SZ",
-    #     "000875.SZ",
-    #     "002027.SZ",
-    #     "002270.SZ",
-    #     "002303.SZ",
-    #     "002749.SZ",
-    #     "002940.SZ",
-    #     "300899.SZ",
-    #     "301377.SZ",
-    #     "301551.SZ",
-    #     "600057.SH",
-    #     "600908.SH",
-    # ]
+    # stocks = ["002896.SZ"]
     # for stock in stocks:
     #     await sync_stock_daily_line(stock, count=1)
     #     await asyncio.sleep(0.5)
-    # from tortoise.expressions import Q
 
     stock_objs = await Stock.all()
 
