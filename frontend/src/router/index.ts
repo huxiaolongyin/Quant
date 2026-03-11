@@ -4,10 +4,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 const Dashboard = () => import('@/views/Dashboard.vue')
 const Watchlist = () => import('@/views/Market/Watchlist.vue')
 const DataSync = () => import('@/views/Data/SyncManager.vue')
+const SelectorList = () => import('@/views/Selector/List.vue')
+const SelectorEditor = () => import('@/views/Selector/Editor.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
 const StrategyEditor = () => import('@/views/Strategy/Editor.vue')
 const BacktestReport = () => import('@/views/Strategy/BacktestReport.vue')
-const NotificationSettings = () => import('@/views/Settings/NotificationSettings.vue')
+const NotificationSettings = () =>
+  import('@/views/Settings/NotificationSettings.vue')
 
 const routes = [
   {
@@ -31,6 +34,18 @@ const routes = [
         name: 'DataSync',
         component: DataSync,
         meta: { title: '数据同步管理' }
+      },
+      {
+        path: 'selector/list',
+        name: 'SelectorList',
+        component: SelectorList,
+        meta: { title: '选股器' }
+      },
+      {
+        path: 'selector/editor/:id?',
+        name: 'SelectorEditor',
+        component: SelectorEditor,
+        meta: { title: '选股器编辑' }
       },
       {
         path: 'strategy/list',

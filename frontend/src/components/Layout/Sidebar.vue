@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { Code, Database, History, LayoutDashboard, TrendingUp } from "lucide-vue-next";
+import { Code, Database, Filter, History, LayoutDashboard, TrendingUp } from "lucide-vue-next";
 import { useRoute } from "vue-router"; // 1. 引入 useRoute
 
 const route = useRoute(); // 2. 获取当前路由对象
@@ -48,6 +48,7 @@ const menuItems = [
   { name: "仪表盘", path: "/", icon: LayoutDashboard },
   { name: "自选行情", path: "/market/watchlist", icon: TrendingUp },
   { name: "数据同步", path: "/data/sync", icon: Database },
+  { name: "选股器", path: "/selector/list", icon: Filter },
   { name: "策略工场", path: "/strategy/list", icon: Code },
   { name: "回测分析", path: "/strategy/backtest", icon: History },
 ];

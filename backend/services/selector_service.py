@@ -1,3 +1,6 @@
+import json
+from datetime import datetime
+
 from backend.models.selector import (
     LogicType,
     NodeType,
@@ -5,15 +8,14 @@ from backend.models.selector import (
     Selector,
     SelectorNode,
 )
+from backend.schemas.selector import SelectorSchema
 
 
 class SelectorService:
     """选股器服务 - JSON 输入/输出"""
 
     @staticmethod
-    async def create_from_json(
-        name: str, rule: dict, description: str = ""
-    ) -> Selector:
+    async def create_from_json(name: str, rule: dict, description: str = "") -> Selector:
         """
         从 JSON 创建选股器
 
@@ -33,16 +35,21 @@ class SelectorService:
             ]
         }
         """
+
         selector = await Selector.create(name=name, description=description)
         await SelectorService._create_node(selector, None, rule, 0)
+
         return selector
 
     @staticmethod
-    async def _create_node(
-        selector: Selector, parent: SelectorNode | None, data: dict, order: int
-    ) -> SelectorNode:
+    async def _create_node(selector: Selector, parent: SelectorNode | None, data: dict, order: int) -> SelectorNode:
         """递归创建节点"""
-        is_group = "children" in data
+        is_group = data.get("children")
+        raw_value = data.get("value")
+        if isinstance(raw_value, (list, dict)):
+            value = json.dumps(raw_value, ensure_ascii=False)
+        else:
+            value = raw_value
 
         node = await SelectorNode.create(
             selector=selector,
@@ -51,7 +58,7 @@ class SelectorService:
             logic=LogicType(data["logic"]) if is_group else None,
             field=data.get("field"),
             operator=Operator(data["operator"]) if data.get("operator") else None,
-            value=data.get("value"),
+            value=value,
             sort_order=order,
         )
 
@@ -62,16 +69,18 @@ class SelectorService:
         return node
 
     @staticmethod
-    async def to_json(selector: Selector) -> dict:
+    async def to_json(selector: Selector) -> SelectorSchema:
         """导出选股器为 JSON"""
         root = await selector.get_root_node()
-        return {
-            "id": selector.id,
-            "name": selector.name,
-            "description": selector.description,
-            "is_active": selector.is_active,
-            "rule": await root.get_tree() if root else None,
-        }
+        return SelectorSchema(
+            id=selector.id,
+            name=selector.name,
+            description=selector.description,
+            is_active=selector.is_active,
+            rule=await root.get_tree() if root else None,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
+        )
 
     @staticmethod
     async def update_rule(selector: Selector, rule: dict) -> Selector:
