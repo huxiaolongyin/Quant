@@ -3,7 +3,9 @@
     <Sidebar />
     <div class="flex-1 flex flex-col min-w-0">
       <Header />
-      <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+      <main
+        class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-100 dark:bg-slate-950 p-6"
+      >
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

@@ -1,16 +1,16 @@
 <template>
   <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-gray-900">角色管理</h1>
+    <div class="page-header">
+      <h1 class="page-title">角色管理</h1>
       <a-button type="primary" @click="openCreateModal">
-        <template #icon><icon-plus /></template>
+        <template #icon><span class="material-symbols-outlined text-base">add</span></template>
         新增角色
       </a-button>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="table-container">
       <div class="flex gap-4 mb-6">
-        <a-input v-model="searchForm.name" placeholder="角色名称" allow-clear style="width: 200px" @press-enter="fetchRoles" />
+        <a-input v-model="searchForm.name" placeholder="角色名称" allow-clear style="width: 200px" @press-enter="fetchRoles"  />
         <a-select v-model="searchForm.status" placeholder="状态" allow-clear style="width: 120px" @change="fetchRoles">
           <a-option :value="1">启用</a-option>
           <a-option :value="0">禁用</a-option>
@@ -26,9 +26,7 @@
           <a-table-column title="描述" data-index="description" />
           <a-table-column title="状态" :width="100">
             <template #cell="{ record }">
-              <a-tag :color="record.status === 1 ? 'green' : 'red'">
-                {{ record.status === 1 ? '启用' : '禁用' }}
-              </a-tag>
+              <a-tag :color="record.status === 1 ? 'green' : 'red'">{{ record.status === 1 ? '启用' : '禁用' }}</a-tag>
             </template>
           </a-table-column>
           <a-table-column title="创建时间" data-index="createdAt" :width="180" />
@@ -51,17 +49,17 @@
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item field="name" label="角色名称">
-              <a-input v-model="form.name" placeholder="请输入角色名称" />
+              <a-input v-model="form.name" placeholder="请输入角色名称"  />
             </a-form-item>
           </a-col>
           <a-col :span="12">
             <a-form-item field="code" label="角色编码">
-              <a-input v-model="form.code" :disabled="isEdit" placeholder="请输入角色编码" />
+              <a-input v-model="form.code" :disabled="isEdit" placeholder="请输入角色编码"  />
             </a-form-item>
           </a-col>
         </a-row>
         <a-form-item field="description" label="描述">
-          <a-textarea v-model="form.description" placeholder="请输入描述" />
+          <a-textarea v-model="form.description" placeholder="请输入描述"  />
         </a-form-item>
         <a-form-item field="status" label="状态">
           <a-radio-group v-model="form.status">
@@ -70,13 +68,11 @@
           </a-radio-group>
         </a-form-item>
         <a-form-item field="permissionIds" label="权限">
-          <div class="border rounded p-4 max-h-60 overflow-y-auto">
+          <div class="border border-slate-700 rounded p-4 max-h-60 overflow-y-auto bg-slate-950">
             <div v-for="(perms, module) in permissionsByModule" :key="module" class="mb-4">
-              <div class="font-medium text-gray-700 mb-2">{{ getModuleName(module) }}</div>
+              <div class="font-medium text-slate-300 mb-2">{{ getModuleName(module) }}</div>
               <a-checkbox-group v-model="form.permissionIds">
-                <a-checkbox v-for="perm in perms" :key="perm.id" :value="perm.id">
-                  {{ perm.name }}
-                </a-checkbox>
+                <a-checkbox v-for="perm in perms" :key="perm.id" :value="perm.id">{{ perm.name }}</a-checkbox>
               </a-checkbox-group>
             </div>
           </div>
@@ -87,11 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { Message } from '@arco-design/web-vue'
-import { IconPlus } from '@arco-design/web-vue/es/icon'
 import { roleApi } from '@/api/user'
-import type { RoleInfo, PermissionInfo } from '@/types/user'
+import type { PermissionInfo, RoleInfo } from '@/types/user'
+import { Message } from '@arco-design/web-vue'
+import { onMounted, reactive, ref } from 'vue'
 
 const loading = ref(false)
 const roles = ref<RoleInfo[]>([])
@@ -101,104 +96,46 @@ const isEdit = ref(false)
 const editingId = ref<number | null>(null)
 const formRef = ref()
 
-const searchForm = reactive({
-  name: '',
-  status: undefined as number | undefined
-})
+const searchForm = reactive({ name: '', status: undefined as number | undefined })
+const pagination = reactive({ current: 1, pageSize: 20, total: 0 })
+const form = reactive({ name: '', code: '', description: '', status: 1, sort: 0, permissionIds: [] as number[] })
+const rules = { name: [{ required: true, message: '请输入角色名称' }], code: [{ required: true, message: '请输入角色编码' }] }
 
-const pagination = reactive({
-  current: 1,
-  pageSize: 20,
-  total: 0
-})
-
-const form = reactive({
-  name: '',
-  code: '',
-  description: '',
-  status: 1,
-  sort: 0,
-  permissionIds: [] as number[]
-})
-
-const rules = {
-  name: [{ required: true, message: '请输入角色名称' }],
-  code: [{ required: true, message: '请输入角色编码' }]
-}
-
-const moduleNameMap: Record<string, string> = {
-  system: '系统管理',
-  trading: '交易管理',
-  data: '数据管理'
-}
-
-function getModuleName(module: string): string {
-  return moduleNameMap[module] || module
-}
+const moduleNameMap: Record<string, string> = { system: '系统管理', trading: '交易管理', data: '数据管理' }
+function getModuleName(module: string): string { return moduleNameMap[module] || module }
 
 async function fetchRoles() {
   loading.value = true
   try {
-    const res = await roleApi.getList({
-      page: pagination.current,
-      pageSize: pagination.pageSize,
-      ...searchForm
-    })
-    if (res.code === 200) {
-      roles.value = res.data.list
-      pagination.total = res.data.total
-    }
-  } finally {
-    loading.value = false
-  }
+    const res = await roleApi.getList({ page: pagination.current, pageSize: pagination.pageSize, ...searchForm })
+    if (res.code === 200) { roles.value = res.data.list; pagination.total = res.data.total }
+  } finally { loading.value = false }
 }
 
 async function fetchPermissions() {
   const res = await roleApi.getPermissionsByModule()
-  if (res.code === 200) {
-    permissionsByModule.value = res.data
-  }
+  if (res.code === 200) { permissionsByModule.value = res.data }
 }
 
-function onPageChange(page: number) {
-  pagination.current = page
-  fetchRoles()
-}
+function onPageChange(page: number) { pagination.current = page; fetchRoles() }
 
-function openCreateModal() {
-  isEdit.value = false
-  editingId.value = null
-  resetForm()
-  modalVisible.value = true
-}
+function openCreateModal() { isEdit.value = false; editingId.value = null; resetForm(); modalVisible.value = true }
 
 async function openEditModal(role: RoleInfo) {
   isEdit.value = true
   editingId.value = role.id
-  
   const res = await roleApi.getDetail(role.id)
   if (res.code === 200) {
     Object.assign(form, {
-      name: res.data.name,
-      code: res.data.code,
-      description: res.data.description || '',
-      status: res.data.status,
-      sort: res.data.sort,
-      permissionIds: res.data.permissions.map(p => p.id)
+      name: res.data.name, code: res.data.code, description: res.data.description || '',
+      status: res.data.status, sort: res.data.sort, permissionIds: res.data.permissions.map(p => p.id)
     })
   }
   modalVisible.value = true
 }
 
 function resetForm() {
-  Object.assign(form, {
-    name: '',
-    code: '',
-    description: '',
-    status: 1,
-    sort: 0,
-    permissionIds: []
-  })
+  Object.assign(form, { name: '', code: '', description: '', status: 1, sort: 0, permissionIds: [] })
   formRef.value?.resetFields()
 }
 
@@ -206,41 +143,19 @@ async function handleSubmit() {
   try {
     await formRef.value?.validate()
     if (isEdit.value && editingId.value) {
-      const res = await roleApi.update(editingId.value, {
-        name: form.name,
-        description: form.description,
-        status: form.status,
-        sort: form.sort,
-        permissionIds: form.permissionIds
-      })
-      if (res.code === 200) {
-        Message.success('更新成功')
-        modalVisible.value = false
-        fetchRoles()
-      }
+      const res = await roleApi.update(editingId.value, { name: form.name, description: form.description, status: form.status, sort: form.sort, permissionIds: form.permissionIds })
+      if (res.code === 200) { Message.success('更新成功'); modalVisible.value = false; fetchRoles() }
     } else {
       const res = await roleApi.create(form)
-      if (res.code === 200) {
-        Message.success('创建成功')
-        modalVisible.value = false
-        fetchRoles()
-      }
+      if (res.code === 200) { Message.success('创建成功'); modalVisible.value = false; fetchRoles() }
     }
-  } catch {
-    // validation failed
-  }
+  } catch {}
 }
 
 async function deleteRole(id: number) {
   const res = await roleApi.delete(id)
-  if (res.code === 200) {
-    Message.success('删除成功')
-    fetchRoles()
-  }
+  if (res.code === 200) { Message.success('删除成功'); fetchRoles() }
 }
 
-onMounted(() => {
-  fetchRoles()
-  fetchPermissions()
-})
+onMounted(() => { fetchRoles(); fetchPermissions() })
 </script>

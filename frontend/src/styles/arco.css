@@ -1,0 +1,27 @@
+@tailwind utilities;
+
+/* Arco Design 暗色主题颜色覆盖 */
+body[arco-theme='dark'] {
+  --color-bg-1: #060b1c;
+  --color-bg-2: #060b1c;
+  --color-bg-3: #2e2e30;
+  --color-bg-4: #0e1530;
+  --color-bg-5: #121a40;
+}
+
+body {
+  --color-fill-2: #ebebee;
+}
+
+/* Radio Group 按钮平均分配宽度 */
+.arco-radio-group-button {
+  @apply flex;
+}
+
+.arco-radio-group-button .arco-radio-button {
+  @apply flex-1 justify-center;
+}
+
+.arco-radio-group-button .arco-radio-button .arco-radio-button-content {
+  @apply flex justify-center;
+}

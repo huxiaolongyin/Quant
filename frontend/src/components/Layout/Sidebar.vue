@@ -1,79 +1,175 @@
 <template>
   <aside
-    class="w-64 bg-slate-900 text-white flex flex-col h-full transition-all duration-300"
+    class="w-64 border-r border-divider bg-white dark:bg-slate-950 flex flex-col"
   >
-    <div class="p-6 flex items-center space-x-3 border-b border-slate-800">
-      <div class="w-8 h-8 bg-blue-500 rounded flex items-center justify-center font-bold">
-        Q
+    <div class="p-6 flex items-center gap-3">
+      <div class="bg-primary p-1.5 rounded-lg">
+        <span class="material-symbols-outlined text-white text-2xl">insights</span>
       </div>
-      <span class="text-xl font-bold tracking-wider">QuantPro</span>
+      <div>
+        <h1 class="text-slate-900 dark:text-white text-lg font-bold leading-none">
+          QuantSystem
+        </h1>
+        <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">
+          Pro Trading Terminal
+        </p>
+      </div>
     </div>
 
-    <nav class="flex-1 overflow-y-auto py-4">
-      <ul class="space-y-1 px-3">
-        <li v-for="item in menuItems" :key="item.path">
-          <!-- 修改了这里：移除了 active-class，改用 :class 动态绑定 -->
-          <router-link
-            :to="item.path"
-            class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors"
-            :class="[
-              isActive(item.path)
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'text-slate-300 hover:text-white hover:bg-slate-800',
-            ]"
-          >
-            <component :is="item.icon" class="w-5 h-5" />
-            <span>{{ item.name }}</span>
-          </router-link>
-        </li>
-      </ul>
+    <nav class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <router-link
+        v-for="item in menuItems"
+        :key="item.path"
+        :to="item.path"
+        class="sidebar-nav-item"
+        :class="
+          isActive(item.path) ? 'sidebar-nav-item-active' : 'sidebar-nav-item-inactive'
+        "
+      >
+        <span class="material-symbols-outlined">{{ item.icon }}</span>
+        <p class="text-sm font-medium">
+          {{ item.name }}
+        </p>
+      </router-link>
+
+      <div class="mt-8 pt-8 border-divider-top">
+        <router-link
+          v-for="item in settingItems"
+          :key="item.path"
+          :to="item.path"
+          class="sidebar-nav-item"
+          :class="
+            isActive(item.path) ? 'sidebar-nav-item-active' : 'sidebar-nav-item-inactive'
+          "
+        >
+          <span class="material-symbols-outlined">{{ item.icon }}</span>
+          <p class="text-sm font-medium">
+            {{ item.name }}
+          </p>
+        </router-link>
+      </div>
     </nav>
 
-    <div class="p-4 border-t border-slate-800">
-      <div class="flex items-center space-x-3 text-sm text-slate-400">
-        <div class="w-2 h-2 rounded-full bg-green-500"></div>
-        <span>系统运行正常</span>
-      </div>
+    <div class="p-4 border-divider-top">
+      <a-dropdown trigger="click" position="top">
+        <div
+          class="flex items-center gap-3 p-2 cursor-pointer hover-surface rounded-lg transition-colors"
+        >
+          <div
+            class="bg-primary/20 rounded-full h-10 w-10 flex items-center justify-center overflow-hidden"
+          >
+            <span class="text-primary font-bold">{{ avatarLetter }}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-bold truncate">
+              {{ userStore.userInfo?.nickname || userStore.userInfo?.username }}
+            </p>
+            <p class="text-xs text-slate-500 truncate">
+              {{ userStore.userInfo?.isSuperuser ? "超级管理员" : "普通用户" }}
+            </p>
+          </div>
+          <span class="material-symbols-outlined text-slate-400 text-lg"
+            >expand_more</span
+          >
+        </div>
+        <template #content>
+          <div class="w-52">
+            <div class="dropdown-menu-item" @click="goToProfile">
+              <span class="material-symbols-outlined text-base">person</span>
+              <span class="text-sm font-medium">个人信息</span>
+            </div>
+            <div class="px-2 py-2">
+              <a-radio-group
+                v-model="themeStore.theme"
+                type="button"
+                size="small"
+                class="w-full"
+                @change="themeStore.setTheme"
+              >
+                <a-radio value="light">
+                  <span class="material-symbols-outlined text-base">light_mode</span>
+                </a-radio>
+                <a-radio value="dark">
+                  <span class="material-symbols-outlined text-base">dark_mode</span>
+                </a-radio>
+                <a-radio value="system">
+                  <span class="material-symbols-outlined text-base"
+                    >settings_suggest</span
+                  >
+                </a-radio>
+              </a-radio-group>
+            </div>
+            <div class="dropdown-menu-item" @click="handleLogout">
+              <span class="material-symbols-outlined text-base">logout</span>
+              <span class="text-sm font-medium">退出登录</span>
+            </div>
+          </div>
+        </template>
+      </a-dropdown>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { Code, Database, Filter, History, LayoutDashboard, Settings, TrendingUp, Users } from "lucide-vue-next";
-import { useRoute } from "vue-router";
-import { computed } from "vue";
+import { authApi } from "@/api/auth";
+import { useThemeStore } from "@/stores/theme";
 import { useUserStore } from "@/stores/user";
+import { Message } from "@arco-design/web-vue";
+import { computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
+const router = useRouter();
 const userStore = useUserStore();
+const themeStore = useThemeStore();
+
+const avatarLetter = computed(() => {
+  const name = userStore.userInfo?.nickname || userStore.userInfo?.username || "";
+  return name.charAt(0).toUpperCase();
+});
+
+function goToProfile() {}
+
+async function handleLogout() {
+  try {
+    await authApi.logout();
+  } catch {}
+  userStore.clearToken();
+  Message.success("已退出登录");
+  router.push("/login");
+}
 
 const menuItems = computed(() => {
   const items = [
-    { name: "仪表盘", path: "/", icon: LayoutDashboard },
-    { name: "自选行情", path: "/market/watchlist", icon: TrendingUp },
-    { name: "数据同步", path: "/data/sync", icon: Database },
-    { name: "选股器", path: "/selector/list", icon: Filter },
-    { name: "策略工场", path: "/strategy/list", icon: Code },
-    { name: "回测分析", path: "/strategy/backtest", icon: History },
+    { name: "仪表盘", path: "/", icon: "dashboard" },
+    { name: "自选行情", path: "/market/watchlist", icon: "show_chart" },
+    { name: "数据同步", path: "/data/sync", icon: "sync" },
+    { name: "选股器", path: "/selector/list", icon: "filter_alt" },
+    { name: "策略工场", path: "/strategy/list", icon: "code" },
+    { name: "回测分析", path: "/strategy/backtest", icon: "history" },
   ];
 
-  if (userStore.hasPermission('user')) {
-    items.push({ name: "用户管理", path: "/system/users", icon: Users });
-  }
-  if (userStore.hasPermission('role')) {
-    items.push({ name: "角色管理", path: "/system/roles", icon: Settings });
+  if (userStore.hasPermission("user")) {
+    items.push({ name: "用户管理", path: "/system/users", icon: "group" });
   }
 
   return items;
 });
 
-// 3. 自定义高亮判断函数
+const settingItems = computed(() => {
+  const items: { name: string; path: string; icon: string }[] = [];
+
+  if (userStore.hasPermission("role")) {
+    items.push({ name: "角色管理", path: "/system/roles", icon: "settings" });
+  }
+
+  return items;
+});
+
 const isActive = (path: string) => {
-  // 如果是根路径 '/'，必须完全相等才算激活
   if (path === "/") {
     return route.path === "/";
   }
-  // 其他路径（如 /market），只要当前路由以它开头就算激活（保持子菜单高亮）
   return route.path.startsWith(path);
 };
 </script>

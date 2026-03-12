@@ -1,8 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   theme: {
-    extend: {}
+    extend: {
+      colors: {
+        primary: '#137fec',
+        success: '#22c55e',
+        danger: '#ef4444',
+      },
+      fontFamily: {
+        display: ['Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        DEFAULT: '0.25rem',
+        lg: '0.5rem',
+        xl: '0.75rem',
+        full: '9999px',
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 }

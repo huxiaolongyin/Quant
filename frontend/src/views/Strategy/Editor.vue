@@ -1,50 +1,39 @@
 <template>
-  <div class="h-full flex flex-col bg-gray-50">
-    <!-- 顶部工具栏 -->
-    <header
-      class="bg-white border-b border-gray-200 px-4 h-14 flex justify-between items-center shadow-sm z-10"
-    >
+  <div class="h-full flex flex-col bg-slate-100 dark:bg-slate-950">
+    <header class="card border-b px-4 h-14 flex justify-between items-center z-10">
       <div class="flex items-center gap-4">
         <a-button type="text" shape="circle" @click="handleBack">
-          <template #icon><icon-left /></template>
+          <template #icon><span class="material-symbols-outlined">arrow_back</span></template>
         </a-button>
 
-        <!-- 策略名称编辑 -->
         <div class="flex flex-col">
           <a-input
             v-model="form.name"
             placeholder="请输入策略名称"
-            class="!bg-transparent !border-none !px-0 !h-auto text-lg font-bold text-gray-800 focus:!bg-gray-100"
+            class="!bg-transparent !border-none !px-0 !h-auto text-lg font-bold text-slate-800 dark:text-white focus:!bg-slate-100 dark:focus:!bg-slate-800"
           />
-          <span class="text-xs text-gray-400" v-if="form.updatedAt"
-            >上次保存: {{ form.updatedAt }}</span
-          >
+          <span class="text-xs text-slate-400" v-if="form.updatedAt">上次保存: {{ form.updatedAt }}</span>
         </div>
       </div>
 
       <a-space>
         <a-button @click="handleSave" :loading="saving">
-          <template #icon><icon-save /></template>
+          <template #icon><span class="material-symbols-outlined text-base">save</span></template>
           保存
         </a-button>
         <a-button type="primary" status="success" @click="handleRun" :loading="running">
-          <template #icon><icon-play-arrow /></template>
+          <template #icon><span class="material-symbols-outlined text-base">play_arrow</span></template>
           运行回测
         </a-button>
       </a-space>
     </header>
 
-    <!-- 主体内容区：左侧代码，右侧结果 -->
     <div class="flex-1 flex overflow-hidden">
-      <!-- 左侧：代码编辑区 -->
-      <div class="flex-1 flex flex-col border-r border-gray-200 relative">
-        <div
-          class="bg-gray-100 px-4 py-1 text-xs text-gray-500 border-b flex justify-between"
-        >
+      <div class="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-700 relative">
+        <div class="card border-b px-4 py-1 text-xs text-muted flex justify-between">
           <span>Python 3.8</span>
           <span>main.py</span>
         </div>
-        <!-- 简易代码编辑器，建议后续替换为 Monaco Editor -->
         <textarea
           v-model="form.code"
           class="flex-1 w-full h-full resize-none bg-[#1e1e1e] text-gray-300 p-4 font-mono text-sm outline-none leading-6"
@@ -52,24 +41,16 @@
         ></textarea>
       </div>
 
-      <!-- 右侧：运行日志/结果 -->
-      <div
-        class="w-[400px] bg-white flex flex-col transition-all duration-300"
-        :class="{ '!w-0': !showConsole }"
-      >
-        <div class="h-9 border-b flex items-center justify-between px-4 bg-gray-50">
-          <span class="font-bold text-gray-700">控制台输出</span>
+      <div class="w-[400px] card flex flex-col transition-all duration-300" :class="{ '!w-0': !showConsole }">
+        <div class="h-9 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 bg-slate-50 dark:bg-slate-950">
+          <span class="font-bold text-slate-700 dark:text-slate-200">控制台输出</span>
           <a-button type="text" size="mini" @click="logs = ''">清空</a-button>
         </div>
 
         <div class="flex-1 overflow-y-auto p-4 bg-[#2b2b2b] font-mono text-xs">
-          <div v-if="!logs && !running" class="text-gray-500 text-center mt-10">
-            暂无运行日志
-          </div>
+          <div v-if="!logs && !running" class="text-gray-500 text-center mt-10">暂无运行日志</div>
           <div v-else class="whitespace-pre-wrap text-green-400">{{ logs }}</div>
-          <div v-if="running" class="mt-2 text-blue-400 animate-pulse">
-            > 正在执行策略回测...
-          </div>
+          <div v-if="running" class="mt-2 text-blue-400 animate-pulse">> 正在执行策略回测...</div>
         </div>
       </div>
     </div>
@@ -79,13 +60,11 @@
 <script setup lang="ts">
 import { fetchRunStrategyBacktest, fetchSaveStrategy, fetchStrategyDetail, type Strategy } from '@/api/strategy';
 import { Message } from '@arco-design/web-vue';
-import { IconLeft, IconPlayArrow, IconSave } from '@arco-design/web-vue/es/icon';
 import { onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-// 状态定义
 const saving = ref(false);
 const running = ref(false);
 const showConsole = ref(true);
@@ -98,9 +77,7 @@ const form = reactive<Strategy>({
   updatedAt: ''
 });
 
-// 初始化加载
 onMounted(async () => {
-  // 模拟从路由获取 ID，这里暂时写死 ID '1'
   const strategyId = '1';
   try {
     const data = await fetchStrategyDetail(strategyId);
@@ -110,7 +87,6 @@ onMounted(async () => {
   }
 });
 
-// 保存策略
 const handleSave = async () => {
   if (!form.name) return Message.warning('请输入策略名称');
 
@@ -126,16 +102,16 @@ const handleSave = async () => {
   }
 };
 
-const handleBack = ()=>{
-  router.push({ name: 'StrategyList'});
-}
-// 运行回测
+const handleBack = () => {
+  router.push({ name: 'StrategyList' });
+};
+
 const handleRun = async () => {
   if (!form.code) return Message.warning('策略代码不能为空');
 
   running.value = true;
-  logs.value = ''; // 清空旧日志
-  showConsole.value = true; // 确保控制台展开
+  logs.value = '';
+  showConsole.value = true;
 
   try {
     const result = await fetchRunStrategyBacktest(form.code);

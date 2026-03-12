@@ -1,0 +1,114 @@
+/* 侧边栏导航菜单项 */
+.sidebar-nav-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-lg transition-colors;
+}
+.sidebar-nav-item-active {
+  @apply bg-primary/10 text-primary font-semibold;
+}
+.sidebar-nav-item-inactive {
+  @apply text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50;
+}
+
+/* 下拉菜单项 */
+.dropdown-menu-item {
+  @apply flex items-center gap-3 px-3 py-2.5 cursor-pointer 
+         hover:bg-primary/10 text-slate-700 dark:text-slate-300 
+         hover:text-primary dark:hover:text-primary 
+         transition-colors rounded-lg mx-1;
+}
+
+/* 边框分隔线 */
+.border-divider {
+  @apply border-slate-200 dark:border-slate-700;
+}
+.border-divider-top {
+  @apply border-t border-slate-200 dark:border-slate-700;
+}
+
+/* ========== 卡片容器 ========== */
+.card {
+  @apply bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700;
+}
+
+.card-padded {
+  @apply bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-6;
+}
+
+.card-shadow {
+  @apply bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm;
+}
+
+.card-hover {
+  @apply rounded-lg transition-all duration-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700;
+}
+.card-hover:hover {
+  transform: translateY(-0.25rem);
+}
+
+/* ========== 页面标题 ========== */
+.page-title {
+  @apply text-2xl font-bold text-slate-900 dark:text-white;
+}
+
+.page-subtitle {
+  @apply text-slate-500 dark:text-slate-400 text-sm;
+}
+
+.section-title {
+  @apply text-lg font-bold text-slate-800 dark:text-white;
+}
+
+/* ========== 统计卡片 ========== */
+.stat-card {
+  @apply bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm;
+}
+
+.stat-card-sm {
+  @apply bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700;
+}
+
+/* ========== Hover 效果 ========== */
+.hover-surface {
+  @apply hover:bg-slate-100 dark:hover:bg-slate-800;
+}
+
+.hover-surface-50 {
+  @apply hover:bg-slate-50 dark:hover:bg-slate-800/50;
+}
+
+/* ========== 空状态 ========== */
+.empty-state {
+  @apply text-slate-400 text-center py-20;
+}
+
+/* ========== 文本颜色 ========== */
+.text-rise {
+  @apply text-red-500;
+}
+
+.text-fall {
+  @apply text-green-500;
+}
+
+.text-muted {
+  @apply text-slate-500 dark:text-slate-400;
+}
+
+/* ========== 页面布局 ========== */
+.page-header {
+  @apply flex justify-between items-center mb-6;
+}
+
+.page-header-with-subtitle {
+  @apply flex justify-between items-center;
+}
+
+/* ========== 表格容器 ========== */
+.table-container {
+  @apply bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 p-6;
+}
+
+/* ========== 按钮样式 ========== */
+.btn-primary-success {
+  @apply bg-primary hover:bg-blue-600 text-white rounded-lg;
+}

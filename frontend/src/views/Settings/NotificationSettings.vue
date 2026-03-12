@@ -1,31 +1,33 @@
 <template>
   <div class="py-2 px-6 space-y-6">
-    <div class="flex justify-between items-center">
-      <div class="text-gray-500 text-sm">
+    <div class="page-header-with-subtitle">
+      <div class="text-muted text-sm">
         配置消息通知渠道，支持钉钉、企业微信、飞书机器人
       </div>
       <a-button type="primary" @click="openModal()">
-        <template #icon><icon-plus /></template>
+        <template #icon
+          ><span class="material-symbols-outlined text-base">add</span></template
+        >
         新增渠道
       </a-button>
     </div>
 
-    <a-card :bordered="false" class="shadow-sm rounded-lg">
+    <a-card :bordered="false" class="card-shadow">
       <a-table :data="channels" :loading="loading" :pagination="false">
         <template #columns>
           <a-table-column title="渠道名称" data-index="name" :width="150" />
           <a-table-column title="类型" data-index="channelType" :width="120">
             <template #cell="{ record }">
-              <a-tag :color="getChannelColor(record.channelType)">
-                {{ getChannelLabel(record.channelType) }}
-              </a-tag>
+              <a-tag :color="getChannelColor(record.channelType)">{{
+                getChannelLabel(record.channelType)
+              }}</a-tag>
             </template>
           </a-table-column>
           <a-table-column title="Webhook" :width="300">
             <template #cell="{ record }">
-              <span class="text-gray-500 text-xs truncate block max-w-xs">
-                {{ maskWebhook(record.webhookUrl) }}
-              </span>
+              <span class="text-slate-500 text-xs truncate block max-w-xs">{{
+                maskWebhook(record.webhookUrl)
+              }}</span>
             </template>
           </a-table-column>
           <a-table-column title="状态" :width="100">
@@ -44,9 +46,8 @@
                   size="small"
                   @click="handleTest(record.id)"
                   :loading="record.testing"
+                  >测试</a-button
                 >
-                  测试
-                </a-button>
                 <a-button size="small" @click="openModal(record)">编辑</a-button>
                 <a-popconfirm
                   content="确定删除此通知渠道？"
@@ -77,9 +78,8 @@
               v-for="item in CHANNEL_TYPE_OPTIONS"
               :key="item.value"
               :value="item.value"
+              >{{ item.label }}</a-option
             >
-              {{ item.label }}
-            </a-option>
           </a-select>
         </a-form-item>
         <a-form-item label="Webhook URL" required>
@@ -87,11 +87,11 @@
         </a-form-item>
         <a-form-item v-if="formData.channelType !== 'wechat'" label="签名密钥">
           <a-input-password v-model="formData.secret" placeholder="可选，用于签名验证" />
-          <template #extra>
-            <span class="text-xs text-gray-400"
+          <template #extra
+            ><span class="text-xs text-slate-400"
               >钉钉/飞书机器人的加签密钥，提高安全性</span
-            >
-          </template>
+            ></template
+          >
         </a-form-item>
         <a-form-item label="是否启用">
           <a-switch v-model="formData.isEnabled" />
@@ -99,7 +99,7 @@
       </a-form>
     </a-modal>
 
-    <a-card title="发送测试消息" :bordered="false" class="shadow-sm rounded-lg">
+    <a-card title="发送测试消息" :bordered="false" class="card-shadow">
       <div class="space-y-4">
         <a-form :model="testMessage" layout="inline">
           <a-form-item label="消息标题">
@@ -120,9 +120,9 @@
             <a-switch v-model="testMessage.isMarkdown" size="small" />
           </a-form-item>
           <a-form-item>
-            <a-button type="primary" @click="handleSendTest" :loading="sending">
-              发送测试
-            </a-button>
+            <a-button type="primary" @click="handleSendTest" :loading="sending"
+              >发送测试</a-button
+            >
           </a-form-item>
         </a-form>
       </div>
@@ -147,7 +147,6 @@ import type {
 } from "@/types/notification";
 import { CHANNEL_TYPE_OPTIONS } from "@/types/notification";
 import { Message } from "@arco-design/web-vue";
-import { IconPlus } from "@arco-design/web-vue/es/icon";
 import { onMounted, reactive, ref } from "vue";
 
 const loading = ref(false);
@@ -164,25 +163,16 @@ const formData = reactive<NotificationChannelCreate>({
   secret: "",
   isEnabled: true,
 });
-
 const testMessage = reactive({
   title: "测试通知",
   content: "这是一条来自量化交易系统的测试消息",
   isMarkdown: false,
 });
 
-const getChannelLabel = (type: ChannelType) => {
-  return CHANNEL_TYPE_OPTIONS.find((o) => o.value === type)?.label || type;
-};
-
-const getChannelColor = (type: ChannelType) => {
-  const colors: Record<ChannelType, string> = {
-    dingtalk: "blue",
-    wechat: "green",
-    feishu: "purple",
-  };
-  return colors[type] || "gray";
-};
+const getChannelLabel = (type: ChannelType) =>
+  CHANNEL_TYPE_OPTIONS.find((o) => o.value === type)?.label || type;
+const getChannelColor = (type: ChannelType) =>
+  ({ dingtalk: "blue", wechat: "green", feishu: "purple" }[type] || "gray");
 
 const maskWebhook = (url: string) => {
   if (!url) return "";
@@ -236,7 +226,6 @@ const handleSubmit = async () => {
     Message.warning("请填写必填项");
     return false;
   }
-
   try {
     if (isEdit.value && editingId.value) {
       await updateChannel(editingId.value, formData);
@@ -278,15 +267,11 @@ const handleDelete = async (id: number) => {
 const handleTest = async (id: number) => {
   const channel = channels.value.find((c) => c.id === id);
   if (!channel) return;
-
   channel.testing = true;
   try {
     const res = await testChannel(id);
-    if (res.data?.success) {
-      Message.success("测试消息发送成功");
-    } else {
-      Message.error(res.data?.message || "测试失败");
-    }
+    if (res.data?.success) Message.success("测试消息发送成功");
+    else Message.error(res.data?.message || "测试失败");
   } catch (e) {
     Message.error("测试失败");
   } finally {
@@ -300,12 +285,8 @@ const handleSendTest = async () => {
     const res = await sendNotification(testMessage);
     if (res.data?.success > 0) {
       Message.success(`成功发送 ${res.data.success}/${res.data.total} 个渠道`);
-      if (res.data.failed > 0) {
-        Message.warning(`${res.data.failed} 个渠道发送失败`);
-      }
-    } else {
-      Message.error("发送失败");
-    }
+      if (res.data.failed > 0) Message.warning(`${res.data.failed} 个渠道发送失败`);
+    } else Message.error("发送失败");
   } catch (e) {
     Message.error("发送失败");
   } finally {

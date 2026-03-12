@@ -1,12 +1,14 @@
 <template>
-  <div class="p-6 bg-gray-50 min-h-screen">
-    <div class="flex items-center justify-between mb-6">
+  <div class="min-h-screen">
+    <div class="page-header">
       <div class="flex items-center gap-4">
         <a-button @click="router.back()">
-          <template #icon><icon-left /></template>
+          <template #icon
+            ><span class="material-symbols-outlined text-base">arrow_back</span></template
+          >
           返回
         </a-button>
-        <h2 class="text-xl font-semibold">{{ isEdit ? "编辑选股器" : "新建选股器" }}</h2>
+        <h2 class="page-title text-xl">{{ isEdit ? "编辑选股器" : "新建选股器" }}</h2>
       </div>
       <div class="flex gap-3">
         <a-button
@@ -16,18 +18,22 @@
           :disabled="hasUnsavedChanges"
           @click="handleExecute"
         >
-          <template #icon><icon-play-arrow /></template>
+          <template #icon
+            ><span class="material-symbols-outlined text-base">play_arrow</span></template
+          >
           执行选股
         </a-button>
         <a-button type="primary" :loading="saving" @click="handleSave">
-          <template #icon><icon-save /></template>
+          <template #icon
+            ><span class="material-symbols-outlined text-base">save</span></template
+          >
           保存
         </a-button>
       </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="card-padded">
         <a-form :model="form" layout="vertical">
           <a-form-item label="选股器名称" required>
             <a-input v-model="form.name" placeholder="请输入选股器名称" />
@@ -47,32 +53,34 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="card-padded">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="font-medium">执行结果</h3>
-          <span v-if="executeResult" class="text-sm text-gray-500">
-            耗时: {{ executeResult.executionTime }}ms
-          </span>
+          <h3 class="section-title">执行结果</h3>
+          <span v-if="executeResult" class="text-sm text-slate-500"
+            >耗时: {{ executeResult.executionTime }}ms</span
+          >
         </div>
 
         <div v-if="executing" class="flex justify-center py-20">
           <a-spin dot tip="正在执行选股..." />
         </div>
 
-        <div v-else-if="!executeResult" class="text-gray-400 text-center py-20">
+        <div v-else-if="!executeResult" class="empty-state">
           点击"执行选股"按钮查看筛选结果
         </div>
 
         <div v-else>
-          <div class="flex items-center gap-4 mb-4 p-4 bg-blue-50 rounded-lg">
+          <div
+            class="flex items-center gap-4 mb-4 p-4 bg-primary/5 dark:bg-primary/10 rounded-lg"
+          >
             <div class="text-center">
-              <div class="text-xs text-gray-500">选股日期</div>
-              <div class="font-bold text-blue-600">{{ executeResult.tradeDate }}</div>
+              <div class="text-xs text-slate-400">选股日期</div>
+              <div class="font-bold text-primary">{{ executeResult.tradeDate }}</div>
             </div>
-            <div class="w-px h-8 bg-blue-200"></div>
+            <div class="w-px h-8 bg-primary/20"></div>
             <div class="text-center">
-              <div class="text-xs text-gray-500">筛选结果</div>
-              <div class="font-bold text-blue-600">{{ executeResult.count }} 只</div>
+              <div class="text-xs text-slate-400">筛选结果</div>
+              <div class="font-bold text-primary">{{ executeResult.count }} 只</div>
             </div>
           </div>
 
@@ -98,8 +106,8 @@
       </div>
     </div>
 
-    <div v-if="isEdit" class="mt-6 bg-white rounded-lg shadow-sm p-6">
-      <h3 class="font-medium mb-4">历史执行记录</h3>
+    <div v-if="isEdit" class="mt-6 card-padded">
+      <h3 class="section-title mb-4">历史执行记录</h3>
       <a-table
         :data="historyResults"
         :loading="loadingHistory"
@@ -119,9 +127,9 @@
           </a-table-column>
           <a-table-column title="操作">
             <template #cell="{ record }">
-              <a-button type="text" size="small" @click="viewResult(record)">
-                查看详情
-              </a-button>
+              <a-button type="text" size="small" @click="viewResult(record)"
+                >查看详情</a-button
+              >
             </template>
           </a-table-column>
         </template>
@@ -134,7 +142,6 @@
 import { ConditionNode, selectorApi, SelectorResult } from "@/api/selector";
 import ConditionBuilder from "@/components/Selector/ConditionBuilder.vue";
 import { Message } from "@arco-design/web-vue";
-import { IconLeft, IconPlayArrow, IconSave } from "@arco-design/web-vue/es/icon";
 import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -155,11 +162,7 @@ const form = ref<{
 }>({
   name: "",
   description: "",
-  rule: {
-    nodeType: "group",
-    logic: "and",
-    children: [],
-  },
+  rule: { nodeType: "group", logic: "and", children: [] },
 });
 
 const hasUnsavedChanges = ref(false);
@@ -200,7 +203,6 @@ const filteredStocks = computed(() => {
 
 const loadSelector = async () => {
   if (!selectorId.value) return;
-
   try {
     const res = await selectorApi.getById(selectorId.value);
     form.value = {
@@ -217,7 +219,6 @@ const loadSelector = async () => {
 
 const loadHistory = async () => {
   if (!selectorId.value) return;
-
   loadingHistory.value = true;
   try {
     const res = await selectorApi.getResults(selectorId.value, { page: 1, pageSize: 10 });
@@ -234,7 +235,6 @@ const handleSave = async () => {
     Message.warning("请输入选股器名称");
     return;
   }
-
   if (!form.value.rule.children?.length) {
     Message.warning("请至少添加一个筛选条件");
     return;
@@ -285,7 +285,6 @@ const handleExecute = async () => {
       });
       const res = await selectorApi.execute(tempSelector.data.id);
       executeResult.value = res.data;
-
       if (!isEdit.value) {
         await selectorApi.update(tempSelector.data.id, { name: form.value.name });
       }
@@ -300,7 +299,6 @@ const handleExecute = async () => {
 
 const viewResult = async (result: SelectorResult) => {
   if (!selectorId.value) return;
-  
   executing.value = true;
   try {
     const res = await selectorApi.getResultById(selectorId.value, result.id);
@@ -325,7 +323,6 @@ onMounted(() => {
     loadSelector();
     loadHistory();
   }
-
   if (route.query.execute === "1" && selectorId.value) {
     handleExecute();
   }

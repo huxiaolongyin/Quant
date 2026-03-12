@@ -19,7 +19,7 @@
       <div class="flex items-center gap-2 mb-3">
         <span class="text-sm text-gray-500">条件关系:</span>
         <a-radio-group v-model="localRule.logic" type="button" size="small">
-          <a-radio value="and">且 (AND)</a-radio>
+          <a-radio value="and" class="w-24">且 (AND)</a-radio>
           <a-radio value="or">或 (OR)</a-radio>
         </a-radio-group>
       </div>
@@ -27,14 +27,14 @@
       <div
         v-for="(child, index) in localRule.children"
         :key="index"
-        class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg group"
+        class="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg group"
       >
         <div class="flex-1 grid grid-cols-12 gap-2">
           <a-select
             v-model="child.field"
             placeholder="选择字段"
             class="col-span-3"
-            @change="onFieldChange(child, index)"
+            @change="onFieldChange(child)"
           >
             <a-optgroup label="基础字段">
               <a-option
@@ -62,11 +62,7 @@
             </a-optgroup>
           </a-select>
 
-          <a-select
-            v-model="child.operator"
-            placeholder="操作符"
-            class="col-span-2"
-          >
+          <a-select v-model="child.operator" placeholder="操作符" class="col-span-2">
             <a-option
               v-for="op in getOperators(child.field)"
               :key="op.value"
@@ -116,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ConditionNode, selectorApi, SelectorField, FieldOption } from "@/api/selector";
+import { ConditionNode, FieldOption, selectorApi, SelectorField } from "@/api/selector";
 import { IconDelete, IconPlus } from "@arco-design/web-vue/es/icon";
 import { computed, onMounted, ref, watch } from "vue";
 
@@ -225,7 +221,7 @@ const loadDynamicOptions = async (field: string, province?: string) => {
   }
 };
 
-const onFieldChange = async (child: ConditionNode, index: number) => {
+const onFieldChange = async (child: ConditionNode) => {
   child.operator = undefined;
   child.value = undefined;
   const ops = getOperators(child.field);
