@@ -7,6 +7,7 @@ from .stock import Stock
 from .strategy import (
     Strategy,
     StrategyBacktest,
+    StrategyPerformance,
     StrategyTag,
     StrategyTagRelation,
     StrategyVersion,
@@ -29,6 +30,7 @@ __all__ = [
     "StrategyTagRelation",
     "StrategyBacktest",
     "StrategyVersion",
+    "StrategyPerformance",
     "Holiday",
     "NotificationChannel",
     "User",

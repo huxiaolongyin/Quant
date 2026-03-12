@@ -9,6 +9,8 @@ const SelectorList = () => import('@/views/Selector/List.vue')
 const SelectorEditor = () => import('@/views/Selector/Editor.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
 const StrategyEditor = () => import('@/views/Strategy/Editor.vue')
+const StrategyTemplates = () => import('@/views/Strategy/Templates.vue')
+const StrategyCreateFromTemplate = () => import('@/views/Strategy/CreateFromTemplate.vue')
 const BacktestReport = () => import('@/views/Strategy/BacktestReport.vue')
 const Settings = () => import('@/views/Settings/Index.vue')
 const Login = () => import('@/views/Auth/Login.vue')
@@ -60,6 +62,18 @@ const routes = [
         name: 'StrategyList',
         component: StrategyList,
         meta: { title: '策略工场' }
+      },
+      {
+        path: 'strategy/templates',
+        name: 'StrategyTemplates',
+        component: StrategyTemplates,
+        meta: { title: '选择策略模板' }
+      },
+      {
+        path: 'strategy/create/:templateId',
+        name: 'StrategyCreateFromTemplate',
+        component: StrategyCreateFromTemplate,
+        meta: { title: '创建策略' }
       },
       {
         path: 'strategy/editor/:id?',

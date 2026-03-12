@@ -3,7 +3,13 @@ from typing import List, Optional, Tuple
 from tortoise.expressions import Q
 from tortoise.transactions import in_transaction
 
-from backend.models.strategy import Strategy, StrategyBacktest, StrategyTag, StrategyTagRelation  # StrategyPerformance,
+from backend.models.strategy import (
+    Strategy,
+    StrategyBacktest,
+    StrategyPerformance,
+    StrategyTag,
+    StrategyTagRelation,
+)
 from backend.schemas.strategy import (
     StrategyCreateSchema,
     StrategyListParams,
@@ -11,6 +17,7 @@ from backend.schemas.strategy import (
     StrategyUpdateSchema,
 )
 from backend.services.base import BaseService
+from backend.strategy_templates import validate_code
 
 
 class StrategyService(BaseService[Strategy, StrategyCreateSchema, StrategyUpdateSchema]):
@@ -93,19 +100,28 @@ class StrategyService(BaseService[Strategy, StrategyCreateSchema, StrategyUpdate
         return total, result
 
     async def create_with_tags(self, obj_in: StrategyCreateSchema) -> Strategy:
-        """创建策略（包含标签关联）"""
-        async with in_transaction():
-            # 提取标签ID
-            tag_ids = obj_in.tag_ids
-            obj_dict = obj_in.model_dump(exclude={"tag_ids"})
+        """创建策略（包含代码验证、版本创建和标签关联）"""
+        validation = validate_code(obj_in.code)
+        if not validation.is_valid:
+            raise ValueError(f"代码验证失败: {'; '.join(validation.errors)}")
 
-            # 创建策略
+        async with in_transaction():
+            tag_ids = obj_in.tag_ids
+            obj_dict = obj_in.model_dump(
+                exclude={"tag_ids", "code", "parameters", "max_position_size", "stop_loss_ratio", "take_profit_ratio"}
+            )
+
             strategy = await self.create(obj_dict)
 
-            # 创建绩效记录
+            version = await strategy.create_version(
+                version_number="v1.0",
+                code=obj_in.code,
+                description="初始版本",
+            )
+            await strategy.set_current_version(str(version.id))
+
             await StrategyPerformance.create(strategy=strategy)
 
-            # 关联标签
             if tag_ids:
                 await self._associate_tags(strategy, tag_ids)
 
@@ -140,11 +156,7 @@ class StrategyService(BaseService[Strategy, StrategyCreateSchema, StrategyUpdate
 
     async def get_with_details(self, id: str) -> Optional[Strategy]:
         """获取策略详情（包含所有关联数据）"""
-        return (
-            await Strategy.filter(id=id)
-            .prefetch_related("tag_relations__tag", "performance", "backtests", "executions")
-            .first()
-        )
+        return await Strategy.filter(id=id).prefetch_related("tag_relations__tag", "performance", "backtests").first()
 
 
 class StrategyTagService(BaseService[StrategyTag, StrategyTagCreateSchema, dict]):

@@ -229,40 +229,37 @@ class StrategyBacktestLog(BaseModel):
         table_description = "策略回测交易记录表"
     def __str__(self):
         return f"TradeLog({self.trade_type} {self.symbol} {self.quantity}@{self.price})"
-# class StrategyPerformance(BaseModel):
-#     """策略绩效快照模型（用于快速查询列表页面数据）"""
+    
+class StrategyPerformance(BaseModel):
+    """策略绩效快照模型（用于快速查询列表页面数据）"""
 
-#     id = fields.UUIDField(pk=True)
-#     strategy = fields.OneToOneField(
-#         "quant.Strategy", related_name="performance", description="关联策略"
-#     )
+    id = fields.UUIDField(pk=True)
+    strategy = fields.OneToOneField(
+        "quant.Strategy", related_name="performance", description="关联策略"
+    )
 
-#     # 最新绩效数据（来自最近的回测或实盘）
-#     latest_return = fields.DecimalField(
-#         max_digits=10, decimal_places=4, default=0, description="最新收益率(%)"
-#     )
-#     latest_win_rate = fields.DecimalField(
-#         max_digits=5, decimal_places=2, default=0, description="最新胜率(%)"
-#     )
+    latest_return = fields.DecimalField(
+        max_digits=10, decimal_places=4, default=0, description="最新收益率(%)"
+    )
+    latest_win_rate = fields.DecimalField(
+        max_digits=5, decimal_places=2, default=0, description="最新胜率(%)"
+    )
 
-#     # 历史最佳绩效
-#     best_return = fields.DecimalField(
-#         max_digits=10, decimal_places=4, default=0, description="历史最佳收益率(%)"
-#     )
-#     best_win_rate = fields.DecimalField(
-#         max_digits=5, decimal_places=2, default=0, description="历史最佳胜率(%)"
-#     )
+    best_return = fields.DecimalField(
+        max_digits=10, decimal_places=4, default=0, description="历史最佳收益率(%)"
+    )
+    best_win_rate = fields.DecimalField(
+        max_digits=5, decimal_places=2, default=0, description="历史最佳胜率(%)"
+    )
 
-#     # 统计数据
-#     backtest_count = fields.IntField(default=0, description="回测次数")
-#     execution_count = fields.IntField(default=0, description="执行次数")
+    backtest_count = fields.IntField(default=0, description="回测次数")
+    execution_count = fields.IntField(default=0, description="执行次数")
 
-#     # 更新时间
-#     updated_at = fields.DatetimeField(auto_now=True, description="更新时间")
+    updated_at = fields.DatetimeField(auto_now=True, description="更新时间")
 
-#     class Meta:
-#         table = "strategy_performances"
-#         table_description = "策略绩效快照表"
+    class Meta:
+        table = "strategy_performances"
+        table_description = "策略绩效快照表"
 
-#     def __str__(self):
-#         return f"StrategyPerformance({self.strategy_id})"
+    def __str__(self):
+        return f"StrategyPerformance({self.strategy_id})"

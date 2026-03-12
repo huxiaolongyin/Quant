@@ -63,10 +63,8 @@ class StrategySchema(BaseSchema, UUIDMixin, TimestampMixin):
     """策略详情响应模型"""
 
     name: str = Field(..., description="策略名称", examples=["RSI策略"])
-    description: Optional[str] = Field(
-        None, description="策略描述", examples=["RSI策略"]
-    )
-    code: str = Field(..., description="策略代码")
+    description: Optional[str] = Field(None, description="策略描述", examples=["RSI策略"])
+    # code: str = Field(..., description="策略代码")
     status: StrategyStatus = Field(..., description="策略状态")
     is_active: bool = Field(..., description="是否激活")
 
@@ -92,18 +90,14 @@ class StrategyCreateSchema(BaseSchema):
     """创建策略请求模型"""
 
     name: str = Field(..., description="策略名称", max_length=200, examples=["RSI策略"])
-    description: Optional[str] = Field(
-        None, description="策略描述", examples=["RSI策略"]
-    )
+    description: Optional[str] = Field(None, description="策略描述", examples=["RSI策略"])
     code: str = Field(..., description="策略代码")
 
     # 策略参数
     parameters: dict = Field(default_factory=dict, description="策略参数配置")
 
     # 风控配置
-    max_position_size: Optional[Decimal] = Field(
-        None, description="最大仓位", ge=0, le=1
-    )
+    max_position_size: Optional[Decimal] = Field(None, description="最大仓位", ge=0, le=1)
     stop_loss_ratio: Optional[Decimal] = Field(None, description="止损比例", ge=0, le=1)
     take_profit_ratio: Optional[Decimal] = Field(None, description="止盈比例", ge=0)
 
@@ -123,9 +117,7 @@ class StrategyUpdateSchema(BaseSchema):
     parameters: Optional[dict] = Field(None, description="策略参数配置")
 
     # 风控配置
-    max_position_size: Optional[Decimal] = Field(
-        None, description="最大仓位", ge=0, le=1
-    )
+    max_position_size: Optional[Decimal] = Field(None, description="最大仓位", ge=0, le=1)
     stop_loss_ratio: Optional[Decimal] = Field(None, description="止损比例", ge=0, le=1)
     take_profit_ratio: Optional[Decimal] = Field(None, description="止盈比例", ge=0)
 
@@ -177,12 +169,8 @@ class StrategyBacktestCreateSchema(BaseSchema):
 
     strategy_id: str = Field(..., description="策略ID")
     name: str = Field(..., description="回测名称", max_length=200)
-    start_date: str = Field(
-        ..., description="回测开始日期", pattern=r"^\d{4}-\d{2}-\d{2}$"
-    )
-    end_date: str = Field(
-        ..., description="回测结束日期", pattern=r"^\d{4}-\d{2}-\d{2}$"
-    )
+    start_date: str = Field(..., description="回测开始日期", pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end_date: str = Field(..., description="回测结束日期", pattern=r"^\d{4}-\d{2}-\d{2}$")
     initial_capital: Decimal = Field(..., description="初始资金", gt=0)
 
 

@@ -9,6 +9,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@guolao/vue-monaco-editor": "^1.6.0",
         "axios": "^1.13.2",
         "dayjs": "^1.11.19",
         "echarts": "^6.0.0",

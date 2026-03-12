@@ -20,6 +20,8 @@ def to_lower_camel_case(x):
 
 
 class BaseModel(Model):
+    class Meta:
+        abstract = True
 
     async def to_dict(
         self,
@@ -68,6 +70,24 @@ class BaseModel(Model):
             await self._process_m2m_fields(result, include_set, exclude_set)
 
         return result
+
+    async def _process_m2m_fields(
+        self,
+        result: Dict[str, Any],
+        include_set: Set[str],
+        exclude_set: Set[str],
+    ) -> None:
+        """处理多对多字段"""
+        for field_name in self._meta.m2m_fields:
+            if (include_set and field_name not in include_set) or field_name in exclude_set:
+                continue
+
+            related_manager = getattr(self, field_name)
+            related_objects = await related_manager.all()
+
+            result[to_lower_camel_case(field_name)] = [
+                await obj.to_dict() for obj in related_objects
+            ]
 
 
 class TimestampMixin:
