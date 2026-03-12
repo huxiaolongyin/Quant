@@ -2,20 +2,33 @@
 
 这个项目的所有值得注意的变化都将记录在这个文件中。
 
-这个格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，还有这个原则遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+格式基于 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)，版本遵循 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)。
 
-## [0.0.1]
+## [0.1.0] - 2026-03-12
 
 ### Added
 
-- 新增 backtrader 框架进行回测
-- 新增 RSI、MACD、 简单均值回归、动量策略
-- 新增回测数据收集
-- 新增股票列表生成
-- 新增节假日数据自动同步，获取上一个交易日数据
+- 新增用户认证与权限管理系统
+- 新增选股器模块，支持可视化配置选股条件
+- 新增消息通知系统，支持钉钉/企业微信/飞书机器人
+- 前端 UI 重构，新增暗黑模式支持
 
 ### Changed
 
-## Fixed
+- 优化股票同步逻辑
+- 重构设置页面并统一品牌名称
 
-### Removed
+## [0.0.1] - 2025-11-17 ~ 2026-02-25
+
+### Added
+
+- 初始化项目代码
+- 新增 Backtrader 框架进行回测
+- 新增 RSI、MACD、均值回归、动量、量价策略
+- 新增回测数据收集
+- 新增股票列表生成
+- 新增节假日数据自动同步（每年1月1日自动同步）
+- 新增看板指标、自选股票页面
+- 新增 Vue 调试工具，支持自动打开浏览器
+- 新增邮箱提醒功能
+- 使用 schema 格式化 API 输出

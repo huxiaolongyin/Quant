@@ -3,39 +3,55 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-blue?logo=python" />
   <img src="https://img.shields.io/badge/Vue-3.x-green?logo=vue.js" />
+  <img src="https://img.shields.io/badge/FastAPI-0.100+-teal?logo=fastapi" />
   <img src="https://img.shields.io/badge/License-MIT-yellow" />
-  <img src="https://img.shields.io/badge/Status-开发中-orange" />
 </p>
 
 > 面向中国 A 股市场的**量化选股与回测系统**，提供可视化策略配置、智能选股、历史回测和多渠道信号推送。
+
+---
+
+## ✨ 功能特性
+
+| 模块        | 描述                               | 状态 |
+| ----------- | ---------------------------------- | ---- |
+| ⭐ 自选行情 | 关注股票的实时/历史行情展示        | ✅   |
+| 🔄 数据同步 | 自动/手动/补数同步每日行情数据     | ✅   |
+| 🔍 选股器   | 可视化配置选股条件，筛选目标股票池 | ✅   |
+| 🔔 通知系统 | 钉钉/企业微信/飞书机器人推送       | ✅   |
+| 📊 仪表盘   | 系统概览、持仓收益、策略运行状态   | 🚧   |
+| 🏭 策略工厂 | 内置 RSI、MACD、均线等策略         | 📋   |
+| ⚙️ 参数调优 | 基于 Optuna 的策略参数自动优化     | 📋   |
+| 📈 回测分析 | 策略回测、收益曲线、交易明细报告   | 📋   |
+| ⚡ 基础配置 | 税率、手续费、通知渠道等系统设置   | 📋   |
+
+> ✅ 已完成 | 🚧 开发中 | 📋 计划中
+
+---
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-| 依赖       | 版本  | 说明         |
-|------------|-------|--------------|
-| Python     | 3.10+ | 后端运行环境 |
-| Node.js    | 18+   | 前端构建     |
-| PostgreSQL | 13+   | 主数据库     |
+| 依赖        | 版本   | 说明                          |
+| ----------- | ------ | ----------------------------- |
+| Python      | 3.10+  | 后端运行环境                  |
+| Node.js     | 18+    | 前端构建                      |
+| TimescaleDB | 最新版 | 时序数据库（PostgreSQL 扩展） |
 
 ### Docker 部署（推荐）
 
 ```bash
-# 克隆项目
 git clone https://github.com/yourname/quant-stock.git
 cd quant-stock
 
-# 配置环境变量
 cp .env.example .env
 # 编辑 .env 填入必要配置
 
-# 启动服务
 docker-compose up -d
 
-# 访问
 # 前端：http://localhost:3000
-# API:  http://localhost:8000/docs
+# API 文档：http://localhost:8654/docs
 ```
 
 ### 本地开发
@@ -46,16 +62,14 @@ docker-compose up -d
 ```bash
 cd backend
 
-# 创建虚拟环境 (推荐使用 uv)
-uv venv && source .venv/bin/activate
+python -m venv .venv && .venv\Scripts\activate  # Windows
+# source .venv/bin/activate  # Linux/macOS
 
-# 安装依赖
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 
 # 初始化数据库
-python scripts/init_db.py
+python -c "from backend.db.db_init import modify_db; import asyncio; asyncio.run(modify_db())"
 
-# 启动服务
 python main.py
 ```
 
@@ -67,35 +81,11 @@ python main.py
 ```bash
 cd frontend
 
-# 安装依赖
 pnpm install
-
-# 开发模式
 pnpm dev
-
-# 生产构建
-pnpm build
 ```
 
 </details>
-
----
-
-## ✨ 功能概览
-
-| 模块        | 描述                               | 状态 |
-|-------------|------------------------------------|------|
-| 📊 仪表盘   | 系统概览、持仓收益、策略运行状态   | 📋   |
-| ⭐ 自选行情 | 关注股票的实时/历史行情展示        | ✅   |
-| 🔄 数据同步 | 自动/手动/补数同步每日行情数据     | ✅   |
-| 🔍 选股器   | 可视化配置选股条件，筛选目标股票池 | 📋   |
-| 🏭 策略工厂 | 内置 RSI、MACD、均线等策略         | 📋   |
-| ⚙️ 参数调优 | 基于 Optuna 的策略参数自动优化     | 📋   |
-| 📈 回测分析 | 策略回测、收益曲线、交易明细报告   | 📋   |
-| 🔔 信号通知 | 邮件/企业微信/钉钉推送交易信号     | 📋   |
-| ⚡ 基础配置 | 税率、手续费、通知渠道等系统设置   | 📋   |
-
-> ✅ 已完成 | 🚧 开发中 | 📋 计划中
 
 ---
 
@@ -103,16 +93,17 @@ pnpm build
 
 ### 🔍 选股器
 
-筛选过滤股票列表，用于跑策略和股票查看。
+可视化配置选股条件，筛选目标股票池。
 
 - **版本管理**：支持选股条件版本控制
 - **智能过滤**：
-  - 简单过滤：对 stock 表字段进行过滤
-  - 复杂过滤：对 DailyLine 配置具体指标计算（最新价、涨停次数等）
+  - 基础字段：交易所、板块、行业、省份、城市、股票名称
+  - 行情指标：最新价、成交量、成交额
+  - 技术指标：涨停次数(近 30 日)、跌停次数(近 30 日)、均线(MA5/10/20)
 - **缓存机制**：每天计算一次，提升性能
 
 ```yaml
-选股条件:
+选股条件示例:
   - 交易所：深圳
   - 排除：ST/*ST 股票
   - 股价：<= 50 元
@@ -120,25 +111,29 @@ pnpm build
   - 排除：近 15 日内有数次涨停/跌停
 ```
 
+### 🔔 通知系统
+
+支持多渠道推送交易信号：
+
+| 渠道              | 状态 | 说明         |
+| ----------------- | ---- | ------------ |
+| 💬 企业微信机器人 | ✅   | Webhook 推送 |
+| 📱 钉钉机器人     | ✅   | 支持签名验证 |
+| 📲 飞书机器人     | ✅   | 支持签名验证 |
+| 📧 邮件 (SMTP)    | 📋   | 计划中       |
+| 📲 Server 酱      | 📋   | 计划中       |
+
 ### 🏭 策略工厂
 
-- **版本管理**：策略版本控制与回滚
-- **代码安全**：使用 RestrictedPython，防止代码注入
-- **参数配置**：支持参数调优
+内置多种交易策略：
 
-| 策略名称   | 类型 | 说明               |
-|------------|------|--------------------|
-| RSI 策略   | 动量 | 超买超卖判断       |
-| MACD 策略  | 趋势 | 金叉死叉信号       |
-| 双均线策略 | 趋势 | 短期均线穿越长期均线 |
-| 布林带策略 | 波动 | 价格触及上下轨信号 |
-| 海龟策略   | 突破 | 唐奇安通道突破     |
-
-### 📈 回测分析
-
-- **基础信息**：回测 ID、策略版本、选股版本、参数快照
-- **时间范围**：开始/结束日期、实际回测耗时
-- **初始设置**：初始资金、手续费率、滑点设置
+| 策略名称     | 类型     | 说明             |
+| ------------ | -------- | ---------------- |
+| RSI 策略     | 动量     | 超买超卖判断     |
+| MACD 策略    | 趋势     | 金叉死叉信号     |
+| 均值回归策略 | 均值回归 | 价格回归均值     |
+| 动量策略     | 动量     | 趋势跟踪         |
+| 量价策略     | 量价     | 成交量与价格分析 |
 
 ---
 
@@ -146,48 +141,42 @@ pnpm build
 
 ### 前端
 
-- **框架**: Vue 3 + TypeScript + Vite
-- **UI**: Arco Design Vue
-- **样式**: Tailwind CSS
-- **状态**: Pinia
-- **图表**: ECharts
+| 技术            | 说明                   |
+| --------------- | ---------------------- |
+| Vue 3           | 渐进式 JavaScript 框架 |
+| TypeScript      | 类型安全               |
+| Vite            | 构建工具               |
+| Arco Design Vue | UI 组件库              |
+| Tailwind CSS    | 原子化 CSS             |
+| Pinia           | 状态管理               |
+| ECharts         | 图表库                 |
 
 ### 后端
 
-- **框架**: FastAPI + Uvicorn
-- **ORM**: Tortoise-ORM
-- **回测**: Backtrader
-- **调度**: APScheduler
-- **数据源**: AkShare
+| 技术         | 说明                 |
+| ------------ | -------------------- |
+| FastAPI      | 现代 Python Web 框架 |
+| Uvicorn      | ASGI 服务器          |
+| Tortoise ORM | 异步 ORM             |
+| Backtrader   | 回测框架             |
+| APScheduler  | 定时任务调度         |
+| AkShare      | 数据源               |
 
 ### 基础设施
 
-- **数据库**: PostgreSQL
-- **缓存**: Redis
-- **部署**: Docker + Docker Compose
-- **反代**: Nginx
+| 技术        | 说明                          |
+| ----------- | ----------------------------- |
+| TimescaleDB | 时序数据库（PostgreSQL 扩展） |
+| Docker      | 容器化部署                    |
 
 ---
 
 ## 📊 数据源
 
-| 数据源                                         | 类型   | 说明             | 推荐度   |
-|------------------------------------------------|--------|------------------|----------|
+| 数据源                                         | 类型   | 说明                 | 推荐度     |
+| ---------------------------------------------- | ------ | -------------------- | ---------- |
 | [AKShare](https://github.com/akfamily/akshare) | 开源库 | 免费、稳定、数据全面 | ⭐⭐⭐⭐⭐ |
-| [Tushare](https://tushare.pro/)                | API    | 需注册积分，数据专业 | ⭐⭐⭐⭐  |
-| 腾讯财经                                       | 爬虫   | 备用方案，有反爬风险 | ⭐⭐     |
-| 新浪财经                                       | 爬虫   | 备用方案，有反爬风险 | ⭐⭐     |
-
----
-
-## 🔔 通知渠道
-
-支持多渠道推送交易信号：
-
-- 📧 邮件 (SMTP)
-- 💬 企业微信机器人
-- 📱 钉钉机器人
-- 📲 Server 酱 (微信推送)
+| [Tushare](https://tushare.pro/)                | API    | 需注册积分，数据专业 | ⭐⭐⭐⭐   |
 
 ---
 
@@ -196,68 +185,33 @@ pnpm build
 ```
 quant-stock/
 ├── backend/
-│   ├── app/
-│   │   ├── api/            # API 路由层
-│   │   │   ├── v1/         # API v1 版本
-│   │   │   └── deps.py     # 依赖注入
-│   │   ├── core/           # 核心配置
-│   │   │   ├── config.py   # 环境配置
-│   │   │   ├── security.py # 认证加密
-│   │   │   └── events.py   # 生命周期事件
-│   │   ├── models/         # ORM 模型
-│   │   ├── schemas/        # Pydantic 模式
-│   │   ├── services/       # 业务逻辑层
-│   │   ├── strategies/     # 交易策略
-│   │   ├── selectors/      # 选股规则引擎
-│   │   ├── backtester/     # 回测引擎
-│   │   ├── notifiers/      # 通知渠道
-│   │   └── tasks/          # 定时任务
-│   ├── scripts/            # 脚本工具
-│   ├── tests/              # 测试用例
-│   ├── requirements.txt
-│   └── main.py
+│   ├── api/                 # API 路由层
+│   │   └── v1/              # API v1 版本
+│   ├── core/                # 核心配置
+│   ├── db/                  # 数据库初始化
+│   ├── enums/               # 枚举定义
+│   ├── models/              # ORM 模型
+│   ├── notifiers/           # 通知渠道
+│   ├── schemas/             # Pydantic 模式
+│   ├── services/            # 业务逻辑层
+│   ├── trading/             # 交易策略与回测
+│   │   ├── strategies/      # 策略实现
+│   │   └── feeds/           # 数据源
+│   ├── main.py
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── views/          # 页面组件
-│   │   ├── components/     # 通用组件
-│   │   ├── composables/    # 组合式函数
-│   │   ├── stores/         # Pinia 状态管理
-│   │   ├── api/            # API 请求封装
-│   │   ├── types/          # TypeScript 类型
-│   │   └── utils/          # 工具函数
+│   │   ├── api/             # API 请求封装
+│   │   ├── components/      # 通用组件
+│   │   ├── stores/          # Pinia 状态管理
+│   │   ├── types/           # TypeScript 类型
+│   │   └── views/           # 页面组件
 │   ├── package.json
 │   └── vite.config.ts
-├── docs/                   # 文档
+├── data/                    # 数据持久化
 ├── docker-compose.yml
-├── Makefile
 └── README.md
 ```
-
----
-
-## 📅 开发计划
-
-### v1.0 (MVP)
-
-- [x] 数据同步模块
-- [ ] 选股器基础功能
-- [ ] 3 个内置策略
-- [ ] 基础回测报告
-- [ ] 邮件通知
-
-### v1.1
-
-- [ ] 策略参数调优 (Optuna)
-- [ ] 更多通知渠道
-- [ ] 回测报告增强
-
-### v2.0
-
-- [ ] 组合策略
-- [ ] 多因子选股
-- [ ] 仓位管理
-- [ ] 风控模块
-- [ ] 模拟盘对接
 
 ---
 
