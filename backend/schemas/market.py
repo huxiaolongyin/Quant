@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import List
 
@@ -69,7 +69,7 @@ class StockBase(BaseSchema):
 class MinuteBar(StockBase):
     """分钟级股票明细"""
 
-    time: str
+    time: datetime
 
 
 class DateBar(StockBase):

@@ -51,16 +51,15 @@ async def sync_stock_daily_line(start_date: datetime, end_date: datetime, symbol
     all_data = {}
     for symbol in tqdm(symbols, desc="获取股票数据"):
         try:
-            stock_df = get_price(symbol, end_date=end_date, count=trade_days)
+            bars = get_price(symbol, end_date=end_date, count=trade_days)
 
             # 过滤数据：交易时间大于开始日期，跳过空数据
-            stock_df = stock_df[stock_df.index >= start_date]
+            bars = [bar for bar in bars if bar.trade_date >= start_date.date()]
 
-            if stock_df is None or stock_df.empty:
+            if not bars:
                 continue
 
-            if not stock_df.empty:
-                all_data[symbol] = stock_df
+            all_data[symbol] = bars
 
             await asyncio.sleep(0.01)  # 避免获取频繁，导致服务异常
 
@@ -88,24 +87,18 @@ async def sync_stock_daily_line(start_date: datetime, end_date: datetime, symbol
         new_records = []
 
         # 遍历所有股票数据，构建新记录列表
-        for symbol, stock_df in all_data.items():
-            for trade_date, row in stock_df.iterrows():
-                date_obj = (
-                    trade_date.date()
-                    if isinstance(trade_date, datetime)
-                    else datetime.strptime(str(trade_date), "%Y-%m-%d").date()
-                )
-
-                if (symbol, date_obj) not in existing_set:
+        for symbol, bars in all_data.items():
+            for bar in bars:
+                if (symbol, bar.trade_date) not in existing_set:
                     new_records.append(
                         DailyLine(
                             stock_code=symbol,
-                            trade_date=date_obj,
-                            open=row["open"],
-                            high=row["high"],
-                            low=row["low"],
-                            close=row["close"],
-                            volume=int(row["volume"]),
+                            trade_date=bar.trade_date,
+                            open=bar.open_,
+                            high=bar.high,
+                            low=bar.low,
+                            close=bar.close,
+                            volume=int(bar.volume),
                             turnover=None,
                         )
                     )

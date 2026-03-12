@@ -112,7 +112,7 @@ def _to_date_bars(rows: list[list], code: str) -> List[DateBar]:
     return result
 
 
-def _to_minute_bars(rows: list[list]) -> MinuteBar:
+def _to_minute_bars(rows: list[list]) -> List[MinuteBar]:
     """将原始行数据列表转换为 MinuteBar 列表。"""
     result = []
     for row in rows:
@@ -272,7 +272,7 @@ def get_price(
 
 
 @cached(cache=_today_minutes_cache)
-def _get_today_minutes(code: str) -> tuple[float, List[MinuteBar]]:
+def _get_today_minutes(code: str) -> tuple[float | None, List[MinuteBar]]:
     """
     获取单个股票最新交易日分钟数据（带60秒缓存）
 
@@ -284,36 +284,23 @@ def _get_today_minutes(code: str) -> tuple[float, List[MinuteBar]]:
         bars: 最新一天的分钟交易信息
     """
     formatted_code = format_code(code)
-    df = get_price(formatted_code, count=250, frequency="1m")
+    bars: List[MinuteBar] = get_price(formatted_code, count=250, frequency="1m")  # type: ignore
 
-    if df is None or df.empty:
-        return {"pre_close": None, "bars": []}
+    if not bars:
+        return None, []
 
     # 获取数据中最新的交易日
-    latest_date = df.index[-1].date()
+    latest_date = bars[-1].time.date()
 
     # 筛选最新交易日的数据
-    df_latest = df[df.index.date == latest_date]
+    bars_latest = [bar for bar in bars if bar.time.date() == latest_date]
 
     # 获取昨收价（最新交易日之前的最后一根K线收盘价）
-    df_previous = df[df.index.date < latest_date]
+    bars_previous = [bar for bar in bars if bar.time.date() < latest_date]
 
-    pre_close = df_previous["close"].iloc[-1] if not df_previous.empty else None
+    pre_close = bars_previous[-1].close if bars_previous else None
 
-    # 构建分钟K线数据
-    bars = [
-        MinuteBar(
-            time=row["datetime"].strftime("%H:%M"),
-            open=row["open"],
-            close=row["close"],
-            high=row["high"],
-            low=row["low"],
-            volume=row["volume"],
-        )
-        for _, row in df_latest.reset_index(names="datetime").iterrows()
-    ]
-
-    return pre_close, bars
+    return pre_close, bars_latest
 
 
 def get_price_quotes(holding_stocks: list[(str, str)], force_refresh: bool = False) -> list[StockQuote]:
@@ -357,7 +344,7 @@ def get_price_quotes(holding_stocks: list[(str, str)], force_refresh: bool = Fal
                 pre_close=pre_close,
                 change=change,
                 change_percent=change_percent,
-                open=bars[0].open,
+                open=bars[0].open_,
                 high=high,
                 low=low,
                 volume=total_volume,

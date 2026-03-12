@@ -86,14 +86,12 @@ async def sync_stock_daily_line(symbol: str, end_date: str = "", count: int = 1)
         end_date: 截止日期，格式为 "YYYY-MM-DD"，默认为空，表示同步至最新数据
         count: 同步的天数，默认为1，表示同步最近的1个交易日数据
     """
+    from backend.schemas.market import DateBar
 
-    stock_df = get_price(symbol, end_date=end_date, count=count)
+    bars: list[DateBar] = get_price(symbol, end_date=end_date, count=count)  # type: ignore
 
     # 取所有日期键
-    trade_dates = [
-        (trade_date if isinstance(trade_date, datetime) else datetime.strptime(str(trade_date), "%Y-%m-%d").date())
-        for trade_date in stock_df.index
-    ]
+    trade_dates = [bar.trade_date for bar in bars]
 
     async with in_transaction() as conn:
         # 查询数据库已有的 trade_date 列表（对应 stock_code）
@@ -102,25 +100,19 @@ async def sync_stock_daily_line(symbol: str, end_date: str = "", count: int = 1)
 
         new_records = []
 
-        for trade_date, row in stock_df.iterrows():
-            date_obj = (
-                trade_date.date()
-                if isinstance(trade_date, datetime)
-                else datetime.strptime(str(trade_date), "%Y-%m-%d").date()
-            )
-
-            if date_obj not in existing_dates:
+        for bar in bars:
+            if bar.trade_date not in existing_dates:
 
                 # 新记录放入批量插入队列
                 new_records.append(
                     DailyLine(
                         stock_code=symbol,
-                        trade_date=date_obj,
-                        open=row["open"],
-                        high=row["high"],
-                        low=row["low"],
-                        close=row["close"],
-                        volume=int(row["volume"]),
+                        trade_date=bar.trade_date,
+                        open=bar.open_,
+                        high=bar.high,
+                        low=bar.low,
+                        close=bar.close,
+                        volume=int(bar.volume),
                         turnover=None,
                     )
                 )
