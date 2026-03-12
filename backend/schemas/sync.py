@@ -48,3 +48,11 @@ class TriggerRequest(BaseSchema):
     type: SyncType
     data_range: list
     payload: dict | None = None
+
+
+# =====================================================================
+#                           调度配置更新
+# =====================================================================
+class SchedulerUpdateRequest(BaseSchema):
+    enabled: bool
+    time: str

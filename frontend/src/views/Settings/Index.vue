@@ -3,6 +3,9 @@
     <h1 class="page-title">设置</h1>
 
     <a-tabs v-model:active-key="activeTab" type="line" @change="onTabChange">
+      <a-tab-pane key="sync" title="数据同步">
+        <SyncManagement />
+      </a-tab-pane>
       <a-tab-pane v-if="userStore.hasPermission('user')" key="users" title="用户管理">
         <UserManagement />
       </a-tab-pane>
@@ -23,17 +26,16 @@ import { useRoute, useRouter } from 'vue-router'
 import UserManagement from './components/UserManagement.vue'
 import RoleManagement from './components/RoleManagement.vue'
 import NotificationManagement from './components/NotificationManagement.vue'
+import SyncManagement from './components/SyncManagement.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const activeTab = ref('users')
+const activeTab = ref('sync')
 
 const defaultTab = computed(() => {
-  if (userStore.hasPermission('user')) return 'users'
-  if (userStore.hasPermission('role')) return 'roles'
-  return 'notification'
+  return 'sync'
 })
 
 function onTabChange(key: string) {
@@ -49,6 +51,8 @@ watch(
       activeTab.value = 'users'
     } else if (tab === 'notification') {
       activeTab.value = 'notification'
+    } else if (tab === 'sync') {
+      activeTab.value = 'sync'
     } else {
       activeTab.value = defaultTab.value
     }

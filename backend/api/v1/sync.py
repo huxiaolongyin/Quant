@@ -8,6 +8,7 @@ from backend.schemas import (
     SyncLogItem,
     SyncSummaryResponse,
     TriggerRequest,
+    SchedulerUpdateRequest,
 )
 from backend.services.sync import sync_service
 from backend.utils import get_previous_trading_day
@@ -49,5 +50,14 @@ async def trigger_sync_task(body: TriggerRequest, background_tasks: BackgroundTa
 
         return BaseResponse.success(message="任务已提交到后台队列")
 
+    except Exception as e:
+        return BaseResponse.error(message=str(e))
+
+
+@router.put("/scheduler", response_model=BaseResponse, summary="更新调度配置")
+async def update_scheduler_config(body: SchedulerUpdateRequest):
+    try:
+        await sync_service.update_scheduler_config(enabled=body.enabled, time=body.time)
+        return BaseResponse.success(message="调度配置已更新")
     except Exception as e:
         return BaseResponse.error(message=str(e))

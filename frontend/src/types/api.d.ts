@@ -74,6 +74,11 @@ export interface SyncTriggerParams {
   payload?: any
 }
 
+export interface SchedulerUpdateParams {
+  enabled: boolean
+  time: string
+}
+
 // =====================================================================
 //                           自选股票
 // =====================================================================

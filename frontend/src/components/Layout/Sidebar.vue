@@ -141,7 +141,6 @@ const menuItems = computed(() => {
   const items = [
     { name: "仪表盘", path: "/", icon: "dashboard" },
     { name: "自选行情", path: "/market/watchlist", icon: "show_chart" },
-    { name: "数据同步", path: "/data/sync", icon: "sync" },
     { name: "选股器", path: "/selector/list", icon: "filter_alt" },
     { name: "策略工场", path: "/strategy/list", icon: "code" },
     { name: "回测分析", path: "/strategy/backtest", icon: "history" },
@@ -151,13 +150,7 @@ const menuItems = computed(() => {
 });
 
 const settingItems = computed(() => {
-  const items: { name: string; path: string; icon: string }[] = [];
-
-  if (userStore.hasPermission("user") || userStore.hasPermission("role")) {
-    items.push({ name: "设置", path: "/settings", icon: "settings" });
-  }
-
-  return items;
+  return [{ name: "设置", path: "/settings", icon: "settings" }];
 });
 
 const isActive = (path: string) => {

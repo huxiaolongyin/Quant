@@ -4,7 +4,6 @@ import { useUserStore } from '@/stores/user'
 
 const Dashboard = () => import('@/views/Dashboard.vue')
 const Watchlist = () => import('@/views/Market/Watchlist.vue')
-const DataSync = () => import('@/views/Data/SyncManager.vue')
 const SelectorList = () => import('@/views/Selector/List.vue')
 const SelectorEditor = () => import('@/views/Selector/Editor.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
@@ -38,12 +37,6 @@ const routes = [
         name: 'Watchlist',
         component: Watchlist,
         meta: { title: '自选股行情' }
-      },
-      {
-        path: 'data/sync',
-        name: 'DataSync',
-        component: DataSync,
-        meta: { title: '数据同步管理' }
       },
       {
         path: 'selector/list',
@@ -121,11 +114,6 @@ router.beforeEach(async (to, from, next) => {
     }
 
     if (to.meta.permission && !userStore.hasPermission(to.meta.permission as string)) {
-      next({ name: 'Dashboard' })
-      return
-    }
-
-    if (to.name === 'Settings' && !userStore.hasPermission('user') && !userStore.hasPermission('role')) {
       next({ name: 'Dashboard' })
       return
     }
