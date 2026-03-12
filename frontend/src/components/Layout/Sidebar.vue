@@ -1,17 +1,15 @@
 <template>
-  <aside
-    class="w-64 border-r border-divider bg-white dark:bg-slate-950 flex flex-col"
-  >
+  <aside class="w-64 border-r border-divider bg-white dark:bg-slate-950 flex flex-col">
     <div class="p-6 flex items-center gap-3">
-      <div class="bg-primary p-1.5 rounded-lg">
+      <div class="bg-primary rounded-lg w-10 h-10 flex items-center justify-center">
         <span class="material-symbols-outlined text-white text-2xl">insights</span>
       </div>
       <div>
         <h1 class="text-slate-900 dark:text-white text-lg font-bold leading-none">
-          QuantSystem
+          Quant
         </h1>
         <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">
-          Pro Trading Terminal
+          Trading Terminal
         </p>
       </div>
     </div>
@@ -149,18 +147,14 @@ const menuItems = computed(() => {
     { name: "回测分析", path: "/strategy/backtest", icon: "history" },
   ];
 
-  if (userStore.hasPermission("user")) {
-    items.push({ name: "用户管理", path: "/system/users", icon: "group" });
-  }
-
   return items;
 });
 
 const settingItems = computed(() => {
   const items: { name: string; path: string; icon: string }[] = [];
 
-  if (userStore.hasPermission("role")) {
-    items.push({ name: "角色管理", path: "/system/roles", icon: "settings" });
+  if (userStore.hasPermission("user") || userStore.hasPermission("role")) {
+    items.push({ name: "设置", path: "/settings", icon: "settings" });
   }
 
   return items;

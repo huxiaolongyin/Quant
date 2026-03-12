@@ -1,13 +1,11 @@
 <template>
-  <div class="py-2 px-6 space-y-6">
-    <div class="page-header-with-subtitle">
+  <div class="space-y-4">
+    <div class="flex justify-between items-center">
       <div class="text-muted text-sm">
         配置消息通知渠道，支持钉钉、企业微信、飞书机器人
       </div>
       <a-button type="primary" @click="openModal()">
-        <template #icon
-          ><span class="material-symbols-outlined text-base">add</span></template
-        >
+        <template #icon><span class="material-symbols-outlined text-base">add</span></template>
         新增渠道
       </a-button>
     </div>

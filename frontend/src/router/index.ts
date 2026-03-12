@@ -10,10 +10,8 @@ const SelectorEditor = () => import('@/views/Selector/Editor.vue')
 const StrategyList = () => import('@/views/Strategy/List.vue')
 const StrategyEditor = () => import('@/views/Strategy/Editor.vue')
 const BacktestReport = () => import('@/views/Strategy/BacktestReport.vue')
-const NotificationSettings = () => import('@/views/Settings/NotificationSettings.vue')
+const Settings = () => import('@/views/Settings/Index.vue')
 const Login = () => import('@/views/Auth/Login.vue')
-const UserList = () => import('@/views/System/UserList.vue')
-const RoleList = () => import('@/views/System/RoleList.vue')
 
 const routes = [
   {
@@ -76,22 +74,10 @@ const routes = [
         meta: { title: '回测绩效分析' }
       },
       {
-        path: 'settings/notification',
-        name: 'NotificationSettings',
-        component: NotificationSettings,
-        meta: { title: '通知设置' }
-      },
-      {
-        path: 'system/users',
-        name: 'UserList',
-        component: UserList,
-        meta: { title: '用户管理', permission: 'user' }
-      },
-      {
-        path: 'system/roles',
-        name: 'RoleList',
-        component: RoleList,
-        meta: { title: '角色管理', permission: 'role' }
+        path: 'settings',
+        name: 'Settings',
+        component: Settings,
+        meta: { title: '设置' }
       }
     ]
   }
@@ -121,6 +107,11 @@ router.beforeEach(async (to, from, next) => {
     }
 
     if (to.meta.permission && !userStore.hasPermission(to.meta.permission as string)) {
+      next({ name: 'Dashboard' })
+      return
+    }
+
+    if (to.name === 'Settings' && !userStore.hasPermission('user') && !userStore.hasPermission('role')) {
       next({ name: 'Dashboard' })
       return
     }

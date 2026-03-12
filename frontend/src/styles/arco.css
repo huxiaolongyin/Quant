@@ -1,16 +1,17 @@
 @tailwind utilities;
 
+body {
+  --color-fill-2: theme(colors.slate.100);
+}
+
 /* Arco Design 暗色主题颜色覆盖 */
 body[arco-theme='dark'] {
   --color-bg-1: #060b1c;
   --color-bg-2: #060b1c;
-  --color-bg-3: #2e2e30;
+  --color-bg-3: theme(colors.slate.900);
   --color-bg-4: #0e1530;
   --color-bg-5: #121a40;
-}
-
-body {
-  --color-fill-2: #ebebee;
+  --color-fill-2: theme(colors.slate.800);
 }
 
 /* Radio Group 按钮平均分配宽度 */
